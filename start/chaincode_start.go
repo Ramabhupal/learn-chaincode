@@ -44,6 +44,12 @@ type AllOrders struct{
 	OpenOrders []Order `json:"open_orders"`
 }
 
+type Asset struct{
+	  User string        `json:"user"`
+	conatinerIDs []string `json:"containerids"`
+	coinIds []string `json:"coinids"`
+}
+
 func main() {
 	err := shim.Start(new(SimpleChaincode))
 	if err != nil {
@@ -84,6 +90,11 @@ func(t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string,
 	if err != nil {       
 		return nil, err
 }
+	// Resetting the Assets of Supplier for test case- later on we can do for all of them
+	var empty Asset
+	jsonAsBytes, _ = json.Marshal(empty)
+	err = stub.PutState("SupplierAssets",jsonAsbytes)
+	
 	
         return nil, nil
 
@@ -143,7 +154,7 @@ res.User = user
 res.Litres = litres
 milkAsBytes, _ =json.Marshal(res)
 
-stub.PutState(id,milkAsBytes)
+stub.PutState(res.ContainerID,milkAsBytes)
 	
 	
 	containerAsBytes, err := stub.GetState(containerIndexStr)
@@ -153,12 +164,24 @@ stub.PutState(id,milkAsBytes)
 	var containerIndex []string                           //an array to store container indices - later this wil be the value for containerIndexStr
 	json.Unmarshal(containerAsBytes, &containerIndex)	
 	
-	//append the newly created container
+	//append the newly created container to the global container list
 	containerIndex = append(containerIndex, res.ContainerID)									//add marble name to index list
 	fmt.Println("! container index: ", containerIndex)
 	jsonAsBytes, _ := json.Marshal(containerIndex)
-err = stub.PutState(containerIndexStr, jsonAsBytes)
+        err = stub.PutState(containerIndexStr, jsonAsBytes)
 
+	 // append the container ID to the existing assets of the Supplier
+	
+	supplierassetAsBytes := stub.GetState("SupplierAssets")
+	supplierasset := Asset{}
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	supplierasset.containerIDs = append(supplierasset.containerIDs, res.ContainerID)
+	supplierassetAsBytes = json.Marshal(supplierasset)
+	stub.PutState("SupplierAssets",supplierassetAsBytes)
+
+	
+	
+	
 return nil,nil
 
 }
@@ -289,10 +312,54 @@ json.Unmarshal(containerAsBytes, &res)
 	if res.Litres == orders.OpenOrders[0].Litres {
 		fmt.Println("Found a suitable container")
 		stub.PutState("hi",[]byte("Your product will be shipped soon"))
+		orders.OpenOrders[0].Status = "Ready to be Shipped"
+		//t.init_logistics(stub,orders.OpenOrders[0].OrderId, containerIndex[0])
 	}
 	
 return nil,nil	
 }
+
+func (t *SimpleChaincode) init_logistics(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	
+	fmt.Println("Inside Init logistics function")
+	OrderID = args[0]
+	ContainerID = args[1]
+	
+	
+	ordersAsBytes, err := stub.GetState(OrderID)
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	ShipOrder := Order{} 
+	json.Unmarshal(ordersAsBytes, &ShipOrder)
+	
+	ShipOrder.Status = "In transit"
+	 
+	ordersAsBytes = json.Marshal(ShipOrder)
+	
+	stub.PutState(OrderID,ordersAsBytes)
+	//t.set_user(stub,OrderID,ContainerID)
+	
+	
+}
+
+
+func (t *SimpleChaincode) set_user(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	
+// OrderId  ContainerID
+	
+//So here we will set the user name in conatiner ID to the one in Order ID
+
+ordersAsBytes, err := stub.GetState(OrderID)
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	ShipOrder := Order{} 
+	json.Unmarshal(ordersAsBytes, &ShipOrder)
+
+
+
+
 
 /*
 func (t *SimpleChaincode) init_supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
