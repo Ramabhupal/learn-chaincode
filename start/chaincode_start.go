@@ -28,12 +28,15 @@ type MilkContainer struct{
 
 }
 
-
+type Coinvalue struct{
+        User string        `json:"user"`
+	Cents int      'json:"cents"`
+}
 type SupplyCoin struct{
 
         CoinID string `json:"coinid"`
-        User string        `json:"user"`
-	Cents int      'json:"cents"`
+	Uservalue []Coinvalue  `json:"uservalue"`
+        
 }
 
 type Order struct{
@@ -235,12 +238,36 @@ if res.CoinID == id{
 }
 // Proceed to create if not der in ntwrk
 res.CoinID = id
-res.User = user
-res.Cents=100                                            //default value for one unit of coin is 100  coin ID has a value of 100 cents
+	uservalue := Uservalue{}     //default value for one unit of coin is 100  coin ID has a value of 100 cents
+	uservalue.User = "user"
+	uservalue.Cents = 100
+	res.Uservalue = append(res.Uservalue, uservalue)
 
 coinAsBytes, _ = json.Marshal(res)
 stub.PutState(id,coinAsBytes)
 //t.read(stub,"res.CoinID")
+	
+ //Updating assets
+	if (user == "Market"){
+	assetAsBytes,_ := stub.GetState("MarketAssets")        // The same key which we used in Init function 
+	asset := Asset{}
+	json.Unmarshal( assetAsBytes, &asset)
+	asset.coinIDs = append(asset.coinIDs, res.CoinID)
+	assetAsBytes,_=  json.Marshal(asset)
+	stub.PutState("MarketAssets",assetAsBytes)
+	} else if (user == "Logistics"){
+	
+	assetAsBytes,_ := stub.GetState("LogisticsAssets")        // The same key which we used in Init function 
+	asset := Asset{}
+	json.Unmarshal( assetAsBytes, &asset)
+	asset.coinIDs = append(asset.coinIDs, res.CoinID)
+	assetAsBytes,_=  json.Marshal(asset)
+	stub.PutState("LogisticsAssets",assetAsBytes)
+	
+	}
+	
+	
+	
 return nil,nil
 }
 
@@ -518,26 +545,29 @@ return nil,nil
 
 func (t *SimpleChaincode) moneytransfer( stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	
-//args[0] 
-//value in Cents to be transferred
+//args[0]    args[1]     args[2]
+//Sender     Receiver     value in Cents to be transferred 
 	//lets keep it simple for now, just fetch the coin from ledger, change username to Supplier and End of Story
-	CoinID := args[0]
+	sender := args[0]
+	receiver := args[1]
+	transferamount := args[2]
 	
 	
-	
-	assetAsBytes,err := stub.GetState(CoinID)
+	if (sender == "Market"){
+		
+	assetAsBytes,err := stub.GetState("MarketAssets")
 	if err != nil{
-		fmt.Println("Something wrog happened")
+		fmt.Println("Something wrong happened")
 	}
 	
-	Transfercoin := SupplyCoin{}
-	json.Unmarshal(assetAsBytes, &Transfercoin)
+		MarketAsset := Asset{}
+		json.Unmarshal(assetAsBytes, MarketAsset)
 	
-	if (Transfercoin.User == "Market") {   // check if the market guy actually holds coin in his name
+		coinasbytes , _ = stub.GetState(MarketAsset.coinIDs[0])
+		transfercoin := Supplycoin{}
+		json.Unmarshal(coinasbytes, transfercoin)
+		if (transfercoin.Uservalue.User
 	
-		Transfercoin.User = "Supplier"
-		assetAsBytes,err = json.Marshal(Transfercoin)
-		stub.PutState(CoinID, assetAsBytes)
 		return nil,nil
 		
 	}else{
