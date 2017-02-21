@@ -278,9 +278,29 @@ func (t *SimpleChaincode) Buy_milk(stub shim.ChaincodeStubInterface, args []stri
 //"10"
 // customer asks for a qty, check if market has that much quantity, if there-create a container for customer with qty he asked, and subtract the same from Market
 
-
-
-
+	quantity := strconv.Atoi(args[0])
+	marketassetAsBytes, err := stub.GetState("Marketassets")
+	if err != nil {
+		return nil, errors.New("Failed to get container index")
+	}
+	Marketasset := Asset{}             
+	json.Unmarshal(marketassetAsBytes, &Marketasset )
+	
+	l := len(Marketasset.containerIDs)
+	for i := 0, i < len, i++{
+		containerAsBytes,_ = stub.GetState(Marketasset.containerIDs[i])
+	
+	res := MilkContainer{} 
+        json.Unmarshal(containerAsBytes, &res)
+ 
+		if (res.Litres >= quantity){
+			res.Litres -= quantity
+			containerAsBytes=json.Marshal(res)
+			stub.PutState(Marketasset.containerIDs[i],containerAsBytes)
+		break
+		}
+	}
+	return nil,nil
 }
 
 /*****************ORDER MILK****************/
