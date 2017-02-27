@@ -27,7 +27,7 @@ type MilkContainer struct{
         Litres int        `json:"litres"`
 
 }
-
+/*
 type Coinvalue struct{
         User string        `json:"user"`
 	Cents int      'json:"cents"`
@@ -37,6 +37,14 @@ type SupplyCoin struct{
         CoinID string `json:"coinid"`
 	Uservalue []Coinvalue  `json:"uservalue"`
         
+}
+*/
+
+
+type SupplyCoin struct{
+
+        CoinID string `json:"coinid"`
+        User string        `json:"user"`
 }
 
 type Order struct{
@@ -214,7 +222,7 @@ return nil,nil
 
 
 /******************Asset Coin creation****************/
-
+/*
 func (t *SimpleChaincode) Create_coin(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
 //"1x245" "Market/Logistics"
@@ -270,7 +278,59 @@ stub.PutState(id,coinAsBytes)
 	
 return nil,nil
 }
+*/
 
+func (t *SimpleChaincode) Create_coin(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+
+//"1x245" "Market/Logistics"
+id := args[0]
+user:= args[1]
+//Check if coin already exists in network
+	fmt.Println(" Inside Create coin function")
+coinAsBytes , err := stub.GetState(id)
+if err != nil{
+              return nil, errors.New("Failed to get details of given id")
+} 
+
+res :=SupplyCoin{}
+
+json.Unmarshal(coinAsBytes, &res)
+
+if res.CoinID == id{
+
+          fmt.Println("Coin already exists")
+          fmt.Println(res)
+          return nil,errors.New("This coin already exists")
+}
+// Proceed to create if not der in ntwrk
+res.CoinID = id
+res.User = user
+
+coinAsBytes, _ = json.Marshal(res)
+stub.PutState(id,coinAsBytes)
+	
+	 fmt.Println("Coin created successfully, details are")
+	fmt.Printf("%+v\n", res)
+//t.read(stub,"res.CoinID")
+	
+	// append the container ID to the existing assets of the Supplier
+	
+	userAssets := user +"Assets"
+	fmt.Println("Updating ",userAssets)
+	assetAsBytes,_ := stub.GetState(userAssets)        // The same key which we used in Init function 
+	asset := Asset{}
+	json.Unmarshal( assetAsBytes, &asset)
+	asset.User = user
+	asset.coinIDs = append(asset.coinIDs, res.CoinID)
+	asset.Supplycoins += 1
+	assetAsBytes,_=  json.Marshal(asset)
+	stub.PutState(userAssets,assetAsBytes)
+	fmt.Println("Balance of " , user)
+       fmt.Printf("%+v\n", asset)
+
+
+return nil,nil
+}
 /*********************Buy milk - Customer interactio*******************/
 
 func (t *SimpleChaincode) Buy_milk(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
@@ -560,7 +620,7 @@ return nil,nil
 }
 
 
-
+/*
 
 
 func (t *SimpleChaincode) moneytransfer( stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
@@ -602,7 +662,50 @@ func (t *SimpleChaincode) moneytransfer( stub shim.ChaincodeStubInterface, args 
 return nil,nil
 	
 }
+*/
 
+
+
+func cointransfer( stub shim.ChaincodeStubInterface, args []string) ( error) {
+	
+//args[0] 
+//coinID  
+	//lets keep it simple for now, just fetch the coin from ledger, change username to Supplier and End of Story
+	CoinID := args[0]
+	sender  := args[1]
+	receiver := args[2]
+	
+	fmt.Println("Payment time, inside moneytransfer")
+	
+	assetAsBytes,err := stub.GetState(CoinID)
+	if err != nil{
+		fmt.Println("Something wrong happened while fetching coin details")
+	}
+	
+	Transfercoin := SupplyCoin{}
+	json.Unmarshal(assetAsBytes, &Transfercoin)
+	
+	if (Transfercoin.User == sender) {   // check if the market guy actually holds coin in his name
+	
+		Transfercoin.User = receiver
+		assetAsBytes,err = json.Marshal(Transfercoin)
+		stub.PutState(CoinID, assetAsBytes)
+		fmt.Printf("%+v\n", Transfercoin)
+		fmt.Println("END OF PHASE 1")
+		return nil
+		
+	}else{
+	
+		fmt.Println("There was some issue in transferring")
+		//stub.PutState("cointransfer",[]byte("problem in coin transfer"))
+		//t.read(stub,"cointransfer")
+		return nil
+	}
+
+	
+return nil
+	
+}
 
 
 
