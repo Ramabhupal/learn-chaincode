@@ -48,7 +48,7 @@ type MilkContainer struct{
 
 type Asset struct{
 	User string        `json:"user"`
-	containerIDs []string `json:"containerIDs"`
+	ContainerIDs []string `json:"containerIDs"`
 	LitresofMilk int `json:"litresofmilk"`
 	Supplycoins int `json:"supplycoins"`
 }
@@ -174,7 +174,7 @@ if res.ContainerID == id{
 	supplierasset := Asset{}
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
 	
-	supplierasset.containerIDs = append(supplierasset.containerIDs, res.ContainerID)
+	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, res.ContainerID)
 	supplierasset.LitresofMilk += res.Userlist[0].Litres
 	fmt.Println("Balance of Supplier")
         fmt.Printf("%+v\n", supplierasset)
@@ -186,7 +186,7 @@ if res.ContainerID == id{
 	
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
 	fmt.Printf("%+v\n", supplierasset)
-	cid := supplierasset.containerIDs[0]
+	cid := supplierasset.ContainerIDs[0]
 	userAssets := "MarketAssets"
 	assetAsBytes,_ := stub.GetState(userAssets)        // The same key which we used in Init function 
 	asset := Asset{}
@@ -195,7 +195,7 @@ if res.ContainerID == id{
 	fmt.Println("Updating ",userAssets)
 	asset.LitresofMilk += 50
 	fmt.Println("appending",cid,"to Market container id list")
-        asset.containerIDs = append(asset.containerIDs,cid)
+        asset.ContainerIDs = append(asset.ContainerIDs,cid)
 	fmt.Printf("%+v\n", asset)
 	assetAsBytes,_=  json.Marshal(asset)
 	stub.PutState(userAssets,assetAsBytes)
@@ -238,7 +238,7 @@ if (supplierasset.LitresofMilk >= 50 ){
 		fmt.Println("Enough stock is available, finding a suitable container.....")
 		
 	 fmt.Printf("%+v\n", supplierasset)
-	cid := supplierasset.containerIDs[0]
+	cid := supplierasset.ContainerIDs[0]
 	containerassetAsBytes, _ := stub.GetState(cid)
 	res := MilkContainer{} 
 	json.Unmarshal(containerassetAsBytes,&res)
