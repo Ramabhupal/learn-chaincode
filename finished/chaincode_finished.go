@@ -98,15 +98,11 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	if err != nil {       
 		return nil, err
 }
-	err = stub.PutState(customerOrdersStr, jsonAsBytes)                 //So the value for key is null
-	if err != nil {       
-		return nil, err
-}
-
+	
 	var emptyasset Asset
 	
 	emptyasset.User = "Supplier"
-	jsonAsBytes, _ := json.Marshal(emptyasset) 
+	jsonAsBytes, _ = json.Marshal(emptyasset) 
 	stub.PutState("SupplierAssets",jsonAsBytes) 
 	emptyasset.User = "Market"
 	jsonAsBytes, _ = json.Marshal(emptyasset) 
@@ -238,7 +234,7 @@ Shiporder.Litres = 5 * 10
 	json.Unmarshal(supplierassetAsBytes, &supplierasset )
 	fmt.Printf("%+v\n", supplierasset)
 //checking if Supplier has the stock	
-if (supplierasset.LitresofMilk >= quantity ){
+if (supplierasset.LitresofMilk >= 50 ){
 		fmt.Println("Enough stock is available, finding a suitable container.....")
 		
 	 fmt.Printf("%+v\n", supplierasset)
@@ -255,7 +251,7 @@ if (supplierasset.LitresofMilk >= quantity ){
 		var b [3]string
 		b[0] = "1x223"
 		b[1] = "Supplier"
-		b[2] = strconv.Itoa(ShipOrder.Litres)
+		b[2] = strconv.Itoa(Shiporder.Litres)
 		Create_milkcontainer(stub,b)
 		
 	        fmt.Println("Successfully created container, check stock again to know your container details ") 
