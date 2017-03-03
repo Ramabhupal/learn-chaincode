@@ -72,6 +72,9 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	emptyasset.User = "Supplier"
 	jsonAsBytes, _ := json.Marshal(emptyasset) 
 	stub.PutState("SupplierAssets",jsonAsBytes) 
+	emptyasset.User = "Market"
+	jsonAsBytes, _ = json.Marshal(emptyasset) 
+	err = stub.PutState("MarketAssets", jsonAsBytes) 
 	return nil, nil
 }
 
@@ -151,6 +154,34 @@ if res.ContainerID == id{
 	
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
 	fmt.Printf("%+v\n", supplierasset)
+	cid := supplierasset.containerIDs[0]
+	userAssets := "MarketAssets"
+	assetAsBytes,_ := stub.GetState(userAssets)        // The same key which we used in Init function 
+	asset := Asset{}
+	json.Unmarshal( assetAsBytes, &asset)
+	 
+	fmt.Println("Updating ",userAssets)
+	asset.LitresofMilk += 50
+	fmt.Println("appending",cid,"to Market container id list")
+        asset.containerIDs = append(asset.containerIDs,cid)
+	fmt.Printf("%+v\n", asset)
+	assetAsBytes,_=  json.Marshal(asset)
+	stub.PutState(userAssets,assetAsBytes)
+	assetAsBytes,_ = stub.GetState(userAssets)        // The same key which we used in Init function 
+	json.Unmarshal( assetAsBytes, &asset)
+	 fmt.Printf("%+v\n", asset)
+	
+	
+	
+	for i := 0 ;i < len(supplierasset.containerIDs);i++{
+	
+            if(supplierasset.containerIDs[i] == "1x223"){
+
+            supplierasset.containerIDs =     append(supplierasset.containerIDs[:i],supplierasset.containerIDs[i+1:]...)
+           break
+       }	
+}
+fmt.Printf("%+v\n", supplierasset)
 	return nil,nil
 
 }
