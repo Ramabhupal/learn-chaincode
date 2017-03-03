@@ -29,6 +29,11 @@ import (
 type SimpleChaincode struct {
 }
 
+var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs	
+
+
+var openOrdersStr = "_openorders"	  // This will be the key, value will be a list of orders(technically - array of order structs)
+
 type userandlitres struct{
 	User string        `json:"user"`
 	Litres int       `json:"litres"`
@@ -46,6 +51,17 @@ type Asset struct{
 	containerIDs []string `json:"containerIDs"`
 	LitresofMilk int `json:"litresofmilk"`
 	Supplycoins int `json:"supplycoins"`
+}
+
+type Order struct{
+       OrderID string                  `json:"orderid"`
+       User string                     `json:"user"`
+       Status string                   `json:"status"`
+       Litres int                      `json:"litres"`
+}
+
+type AllOrders struct{
+	OpenOrders []Order `json:"open_orders"`
 }
 
 func main() {
@@ -66,6 +82,26 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	if err != nil {
 		return nil, err
 	}
+	
+	var empty []string
+       jsonAsBytes, _ := json.Marshal(empty)                                   //create an empty array of string
+       err = stub.PutState(containerIndexStr, jsonAsBytes)                     //Resetting - Making milk container list as empty 
+       if err != nil {
+		return nil, err
+        }  
+	
+	
+/* Resetting the customer and market order list  */
+       var orders AllOrders                                            // new instance of Orderlist 
+	jsonAsBytes, _ = json.Marshal(orders)				//  it will be null initially
+	err = stub.PutState(openOrdersStr, jsonAsBytes)                 //So the value for key is null
+	if err != nil {       
+		return nil, err
+}
+	err = stub.PutState(customerOrdersStr, jsonAsBytes)                 //So the value for key is null
+	if err != nil {       
+		return nil, err
+}
 
 	var emptyasset Asset
 	
@@ -85,16 +121,16 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 	// Handle different functions
 	if function == "init" {
 		return t.Init(stub, "init", args)
-	} else if function == "Create_milkcontainer" {
-		return t.Create_milkcontainer(stub, args)
-	}
+	} else if function == "checkstockbysupplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.checkstockbysupplier(stub, args)	
+        }
 	fmt.Println("invoke did not find func: " + function)
 
 	return nil, errors.New("Received unknown function invocation: " + function)
 }
 
 
-func(t *SimpleChaincode)  Create_milkcontainer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func  Create_milkcontainer(stub shim.ChaincodeStubInterface, args [3]string) ([]byte, error) {
 var err error
 
 // "1x223" "supplier" "20" 
@@ -172,7 +208,7 @@ if res.ContainerID == id{
 	 fmt.Printf("%+v\n", asset)
 	
 	
-	
+/*
 	for i := 0 ;i < len(supplierasset.containerIDs);i++{
 	
             if(supplierasset.containerIDs[i] == "1x223"){
@@ -182,9 +218,78 @@ if res.ContainerID == id{
        }	
 }
 fmt.Printf("%+v\n", supplierasset)
-	return nil,nil
+*/	return nil,nil
 
 }
+
+
+func(t *SimpleChaincode)  checkstockbysupplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+//Market OrderID
+//args[0]
+	
+Shiporder := Order{}
+Shiporder.User = "Market"
+Shiporder.Status = "Order placed to Supplier "
+Shiporder.OrderID = args[1]
+Shiporder.Litres = 5 * 10
+//fetching assets of supplier	
+	supplierassetAsBytes, _ := stub.GetState("SupplierAssets")
+	supplierasset := Asset{}             
+	json.Unmarshal(supplierassetAsBytes, &supplierasset )
+	fmt.Printf("%+v\n", supplierasset)
+//checking if Supplier has the stock	
+if (supplierasset.LitresofMilk >= quantity ){
+		fmt.Println("Enough stock is available, finding a suitable container.....")
+		
+	 fmt.Printf("%+v\n", supplierasset)
+	cid := supplierasset.containerIDs[0]
+	containerassetAsBytes, _ := stub.GetState(cid)
+	res := MilkContainer{} 
+	json.Unmarshal(containerassetAsBytes,&res)
+      
+	fmt.Println("Found a suitable container, below is the ID of the container, use it while placing order to Logistics")
+	fmt.Printf("%+v\n", res)
+	   // return nil, errors.New("Supplier has the quantity but not all in one container, this will be covered in next phase")
+}else{
+	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
+		var b [3]string
+		b[0] = "1x223"
+		b[1] = "Supplier"
+		b[2] = strconv.Itoa(ShipOrder.Litres)
+		Create_milkcontainer(stub,b)
+		
+	        fmt.Println("Successfully created container, check stock again to know your container details ") 
+	        // can't call function again..loop hole
+		return nil,nil
+}
+	return nil,nil
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Query is our entry point for queries
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
