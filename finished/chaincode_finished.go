@@ -166,6 +166,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Vieworderby_Market(stub, args)	
         }else if function == "Checkstockby_Market" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Checkstockby_Market(stub, args)	
+        }else if function == "Ordermilkto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Ordermilkto_Supplier(stub, args)	
+        }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Vieworderby_Supplier(stub, args)	
         }
 	
 	fmt.Println("invoke did not find func: " + function)
@@ -426,6 +430,73 @@ if (Marketasset.LitresofMilk >= quantity ){
          return  errors.New(" No stock, give order to supplier")
  }
 
+}
+
+
+func(t *SimpleChaincode) Ordermilkto_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+// "cus123"           "abcd"   
+// CustomerOrderID    MarketOrderID 
+
+var err error
+
+//fetching the customer order details and ordering 5 times to the litres customer asked
+CustomerOrderID := args[0]
+orderAsBytes, err := stub.GetState(CustomerOrderID)
+	if err != nil {
+		return  nil, errors.New("Failed to get details of customer order, please make sure your id is correct")
+	}
+CustomerOrder := Order{} 
+json.Unmarshal(orderAsBytes, &CustomerOrder)
+quantity := CustomerOrder.Litres
+	
+//Generating market order
+
+Openorder := Order{}
+Openorder.User = "Market"
+Openorder.Status = "Order placed to Supplier "
+Openorder.OrderID = args[1]
+Openorder.Litres = 5 * quantity
+
+orderAsBytes,_ = json.Marshal(Openorder)
+stub.PutState(Openorder.OrderID,orderAsBytes)
+fmt.Println("your Order has been generated successfully")
+fmt.Printf("%+v\n", Openorder)
+	
+//Add the new market order to market orders list
+	ordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get  existing list of Market orders")
+	}
+	var orders AllOrders
+	json.Unmarshal(ordersAsBytes, &orders)				
+	orders.OpenOrders = append(orders.OpenOrders , Openorder);		//append the new order - Openorder
+	fmt.Println(" appended ",Openorder.OrderID,"to existing market orders")
+	jsonAsBytes, _ := json.Marshal(orders)
+	err = stub.PutState(openOrdersStr, jsonAsBytes)		  // Update the value of the key openOrdersStr
+	if err != nil {
+		return nil, err
+        }
+	
+	
+return nil,nil
+}
+
+
+
+func(t *SimpleChaincode)  Vieworderby_Supplier(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
+// This will be invoked by MARKET- think of UI-View orders- does he pass any parameter there...
+// so here also no need of any arguments.
+	
+	fmt.Printf("Hello Supplier, these are the orders placed to  you by Market")
+	
+	
+	ordersAsBytes, _ := stub.GetState(openOrdersStr)
+	var orders AllOrders
+	json.Unmarshal(ordersAsBytes, &orders)	
+	//This should stop here.. In UI it should display all the orders - beside each order -one button "ship to customer"
+	//If we click on any order, it should call query for that OrderID. So it will be enough if we update OrderID and push it to ledger
+	fmt.Println(orders)
+	 return nil,nil
 }
 
 
