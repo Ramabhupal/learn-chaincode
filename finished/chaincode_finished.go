@@ -283,7 +283,7 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 		
 //Call Deliver to customer function here
 		 Deliverto_Customer(stub,ShipOrder.OrderID)
-	]
+	
 		
 		return nil, nil
 		
