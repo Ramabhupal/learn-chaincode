@@ -160,11 +160,11 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Init(stub, "init", args)
 	}else if function == "Create_coins" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Create_coins(stub, args)	
-        }/*else if function == "BuyMilkfrom_Retailer" { //creates a coin - invoked by market /logistics - params - coin id, entity name
+        }else if function == "BuyMilkfrom_Retailer" { //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.BuyMilkfrom_Retailer(stub, args)	
         }else if function == "Vieworderby_Market" {  //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Vieworderby_Market(stub, args)	
-        }else if function == "Checkstockby_Market" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+        }/*else if function == "Checkstockby_Market" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Checkstockby_Market(stub, args)	
         }else if function == "Ordermilkto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Ordermilkto_Supplier(stub, args)	
@@ -299,7 +299,7 @@ return nil,nil
 }
 
 
-/*
+
 func (t *SimpleChaincode) BuyMilkfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //args[0]      args[1]
 //"cus123"       "10"
@@ -355,7 +355,7 @@ func(t *SimpleChaincode)  Vieworderby_Market(stub shim.ChaincodeStubInterface,ar
 }
 
 
-
+/*
 func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface, args[]string) ([]byte, error){
 	// In UI, beside each order one button to ship to customer, one button to check stock
 	// we will extract details of orderId
