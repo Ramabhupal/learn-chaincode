@@ -935,7 +935,7 @@ func transfer( stub shim.ChaincodeStubInterface, args [3]string) ( error) {
 
 
 
-func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
 	a := args[0]
 	fmt.Printf(a)
