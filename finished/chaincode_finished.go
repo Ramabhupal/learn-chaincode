@@ -170,11 +170,12 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Ordermilkto_Supplier(stub, args)	
         }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Vieworderby_Supplier(stub, args)	
+        }else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Checkstockby_Supplier(stub,args)	
         }
-	
 	fmt.Println("invoke did not find func: " + function)
 
-return nil, errors.New("Received unknown function invocation: " + function)
+        return nil, errors.New("Received unknown function invocation: " + function)
 }
 
 
@@ -244,8 +245,6 @@ func (t *SimpleChaincode) BuyMilkfrom_Retailer(stub shim.ChaincodeStubInterface,
 }
 
 func(t *SimpleChaincode)  Vieworderby_Market(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
-// This will be invoked by MARKET- think of UI-View orders- does he pass any parameter there...
-// so here also no need of any arguments.
 	
 	fmt.Printf("Hello Market, these are the orders placed to  you by customer")
 	
@@ -261,12 +260,7 @@ func(t *SimpleChaincode)  Vieworderby_Market(stub shim.ChaincodeStubInterface,ar
 
 
 func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface, args[]string) ([]byte, error){
-	// In UI, beside each order one button to ship to customer, one button to check stock
-	// we will extract details of orderId
-	//we will exract asset balance of Market
-	// if enough balance is der to deliver display "yes", if not der "no"
-	//no tirggering is needed
-	//OrderID should be passed in UI
+//Customer OrderID should be passed in UI
 //fetching order details
 	OrderID := args[0]
 	orderAsBytes, err := stub.GetState(OrderID)
@@ -500,10 +494,56 @@ func(t *SimpleChaincode)  Vieworderby_Supplier(stub shim.ChaincodeStubInterface,
 }
 
 
+func(t *SimpleChaincode)  Checkstockby_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+//FUNCTIONALITY EXPLAINED
+// In UI, beside each order one button to call logistics, one button to check stock
+// we will extract details of market orderId
+//we will exract asset balance of Supplier
+// if enough balance is der --> find a container and show it, if not create a new container (automated) and show it
+//At the end of this function we will end up with a container
 
+//Market OrderID should be passed in UI
+//fetching order details
+//Market OrderID
+//args[0]
+	OrderID := args[0]
+	orderAsBytes, err := stub.GetState(OrderID)
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	ShipOrder := Order{} 
+	json.Unmarshal(orderAsBytes, &ShipOrder)
+	quantity := ShipOrder.Litres
+//fetching assets of market	
+	supplierassetAsBytes, _ := stub.GetState("SupplierAssets")
+	supplierasset := Asset{}             
+	json.Unmarshal(supplierassetAsBytes, &supplierasset )
+	fmt.Printf("%+v\n", supplierasset)
+//checking if Supplier has the stock	
+if (supplierasset.LitresofMilk >= quantity ){
+	fmt.Println("Enough stock is available, finding a suitable container.....")
+	cid := supplierasset.ContainerIDs[0]
+	containerassetAsBytes, _ := stub.GetState(cid)
+	res := MilkContainer{} 
+	json.Unmarshal(containerassetAsBytes,&res)
+        fmt.Println("Found a suitable container, below is the ID of the container, use it while placing order to Logistics")
+	fmt.Printf("%+v\n", res)
+	
+}else{
+	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
+		var b [3]string
+		b[0] = "1x223"
+		b[1] = "Supplier"
+		b[2] = strconv.Itoa(ShipOrder.Litres)
+//	 Create_milkcontainer(stub,b)
 
-
-
+		
+	       // fmt.Println("Successfully created container, check stock again to know your container details ") 
+	        // can't call function again..loop hole
+		//return nil,nil
+}
+	return nil,nil
+}
 
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
