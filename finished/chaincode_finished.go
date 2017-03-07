@@ -282,10 +282,10 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 		fmt.Println("Enough stock is available, Go ahead and deliver for customer")
 		
 //Call Deliver to customer function here
-		b,_:= Deliverto_Customer(stub,ShipOrder.OrderID)
-		fmt.Println(string(b))
-		str := "Delivered to customer"
-		return []byte(str), nil
+		 Deliverto_Customer(stub,ShipOrder.OrderID)
+	]
+		
+		return nil, nil
 		
 	}else{
 	        fmt.Println("Right now there isn't sufficient quantity , Give order to Supplier/Manufacturer")
@@ -309,7 +309,7 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
                         stub.PutState(customerOrdersStr,  customerordersAsBytes)
 			}
 	       }
-	  return []byte(str), nil
+	  return nil, nil
 		
 		//Now we should send details of updated order status to customer, should be done in UI
 
@@ -320,7 +320,7 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 
 }
 
-func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,error){
+func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) (error){
 
 	//args[0] 
 	//OrderID  
@@ -330,7 +330,7 @@ func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,e
 	OrderID := args
 	orderAsBytes, err := stub.GetState(OrderID)
 	if err != nil {
-		return  nil,errors.New("Failed to get openorders")
+		return  errors.New("Failed to get openorders")
 	}
 	ShipOrder := Order{} 
 	json.Unmarshal(orderAsBytes, &ShipOrder)
@@ -354,7 +354,7 @@ if (Marketasset.LitresofMilk >= quantity ){
 	
 	milkAsBytes, err := stub.GetState(id) 
         if err != nil {
-		return nil, errors.New("Failed to get details of given id") 
+		return  errors.New("Failed to get details of given id") 
         }
 
         res := MilkContainer{} 
@@ -401,7 +401,7 @@ if (Marketasset.LitresofMilk >= quantity ){
 	
         customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
-		return nil, errors.New("Failed to get openorders")
+		return  errors.New("Failed to get openorders")
 	}
 	var orders AllOrders
 	json.Unmarshal(customerordersAsBytes, &orders)				
@@ -418,12 +418,12 @@ if (Marketasset.LitresofMilk >= quantity ){
 	           //    transfer(stub,b)        //Transfer should be automated. So it can't be invoked from UI..Loop hole
 	               fmt.Println("FINALLLLLYYYY, END OF THE STORY")
          
-                      return nil,nil
+                      return nil
 	}else{
-	       return nil, errors.New("On a whole market has quantity, but it is divided into container, right now we are not going to that level")
+	       return  errors.New("On a whole market has quantity, but it is divided into container, right now we are not going to that level")
 	}
 }else{
-         return nil, errors.New(" No stock, give order to supplier")
+         return  errors.New(" No stock, give order to supplier")
  }
 
 }
