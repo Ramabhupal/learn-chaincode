@@ -168,8 +168,6 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Checkstockby_Market(stub, args)	
         }else if function == "Ordermilkto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Ordermilkto_Supplier(stub, args)	
-        }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Vieworderby_Supplier(stub, args)	
         }else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Checkstockby_Supplier(stub,args)	
         }else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
@@ -182,7 +180,9 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
                 return t.Deliverto_Market(stub,args)
         }else if function == "Dummyfunction"{
 		return t.Dummyfunction(stub,args)
-	}
+	}/*else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Vieworderby_Supplier(stub, args)	
+        }*/
 	fmt.Println("invoke did not find func: " + function)
 
         return nil, errors.New("Received unknown function invocation: " + function)
@@ -568,7 +568,7 @@ fmt.Printf("%+v\n", Openorder)
 return nil,nil
 }
 
-
+/*
 
 func(t *SimpleChaincode)  Vieworderby_Supplier(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
 // This will be invoked by MARKET- think of UI-View orders- does he pass any parameter there...
@@ -585,7 +585,7 @@ func(t *SimpleChaincode)  Vieworderby_Supplier(stub shim.ChaincodeStubInterface,
 	fmt.Println(orders)
 	 return nil,nil
 }
-
+*/
 
 func(t *SimpleChaincode)  Checkstockby_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //FUNCTIONALITY EXPLAINED
