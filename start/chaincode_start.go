@@ -170,6 +170,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Ordermilkto_Supplier(stub, args)	
         }else if function == "Dummyfunctiontwo"{
 		return t.Dummyfunctiontwo(stub,args)
+	}else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Checkstockby_Supplier(stub,args)	
+        }else if function == "Dummyfunctionthree"{
+		return t.Dummyfunctionthree(stub,args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -469,6 +473,142 @@ fmt.Printf("%+v\n", Openorder)
 return nil,nil
 }
 
+
+
+func(t *SimpleChaincode)  Checkstockby_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+//FUNCTIONALITY EXPLAINED
+// In UI, beside each order one button to call logistics, one button to check stock
+// we will extract details of market orderId
+//we will exract asset balance of Supplier
+// if enough balance is der --> find a container and show it, if not create a new container (automated) and show it
+//At the end of this function we will end up with a container
+
+//Market OrderID should be passed in UI
+//fetching order details
+//Market OrderID
+//args[0]
+	OrderID := args[0]
+	orderAsBytes, err := stub.GetState(OrderID)
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	ShipOrder := Order{} 
+	json.Unmarshal(orderAsBytes, &ShipOrder)
+	quantity := ShipOrder.Litres
+//fetching assets of market	
+	supplierassetAsBytes, _ := stub.GetState("SupplierAssets")
+	supplierasset := Asset{}             
+	json.Unmarshal(supplierassetAsBytes, &supplierasset )
+	fmt.Printf("%+v\n", supplierasset)
+//checking if Supplier has the stock	
+if (supplierasset.LitresofMilk >= quantity ){
+	fmt.Println("Enough stock is available, finding a suitable container.....")
+	cid := supplierasset.ContainerIDs[0]
+	containerassetAsBytes, _ := stub.GetState(cid)
+	res := MilkContainer{} 
+	json.Unmarshal(containerassetAsBytes,&res)
+        fmt.Println("Found a suitable container, below is the ID of the container, use it while placing order to Logistics")
+	fmt.Printf("%+v\n", res)
+	
+}else{
+	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
+		var b [3]string
+		b[0] = "1x223"
+		b[1] = "Supplier"
+		b[2] = strconv.Itoa(ShipOrder.Litres)
+                Create_milkcontainer(stub,b)
+
+		
+	       fmt.Println("Successfully created container, check stock again to know your container details ") 
+	        // can't call function again..loop hole
+		//return nil,nil
+}
+	return nil,nil
+}
+
+
+
+func  Create_milkcontainer(stub shim.ChaincodeStubInterface, args [3]string) ( error) {
+var err error
+
+// "1x223" "supplier" "20" 
+// args[0] args[1] args[2] 
+	
+	if len(args) != 3{
+		return  errors.New("Please enter all the details")
+        }
+	fmt.Println("Hold on, we are Creating milkcontainer asset for you")
+	
+id := args[0]
+user := args[1]
+litres,err:=strconv.Atoi(args[2])
+	if err != nil {
+		return  errors.New("Litres argument must be a numeric string")
+	}
+	
+// Checking if the container already exists in the network
+milkAsBytes, err := stub.GetState(id) 
+if err != nil {
+		return  errors.New("Failed to get details of given id") 
+}
+
+res := MilkContainer{} 
+json.Unmarshal(milkAsBytes, &res)
+
+if res.ContainerID == id{
+
+        fmt.Println("Container already exixts")
+        fmt.Println("%+v\n",res)
+        return errors.New("This container already exists")
+}
+
+//If not present, create it and Update ledger, containerIndexStr, Assets of Supplier
+//Creation
+        res.ContainerID = id
+	res.Userlist[0].User=user
+	res.Userlist[0].Litres = litres
+	milkAsBytes, _ =json.Marshal(res)
+        stub.PutState(res.ContainerID,milkAsBytes)
+	fmt.Printf("Container created successfully, details are %+v\n", res)
+
+//Update containerIndexStr	
+	containerAsBytes, err := stub.GetState(containerIndexStr)
+	if err != nil {
+		return  errors.New("Failed to get container index")
+	}
+	var containerIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
+	json.Unmarshal(containerAsBytes, &containerIndex)	
+	
+	
+	containerIndex = append(containerIndex, res.ContainerID)          //append the newly created container to the global container list									//add marble name to index list
+	fmt.Println("container indices in the network: ", containerIndex)
+	jsonAsBytes, _ := json.Marshal(containerIndex)
+        err = stub.PutState(containerIndexStr, jsonAsBytes)
+	
+// append the container ID to the existing assets of the Supplier
+	
+	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	supplierasset := Asset{}
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	
+	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, res.ContainerID)
+	supplierasset.LitresofMilk += res.Userlist[0].Litres
+	supplierassetAsBytes,_=  json.Marshal(supplierasset)
+	stub.PutState("SupplierAssets",supplierassetAsBytes)
+	fmt.Println("Balance of Supplier")
+        fmt.Printf("%+v\n", supplierasset)
+    //double checking
+	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	fmt.Printf("%+v\n", supplierasset)
+	
+	
+	
+	return nil
+
+}
+
 	
 func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
@@ -486,7 +626,13 @@ func (t *SimpleChaincode) Dummyfunctiontwo(stub shim.ChaincodeStubInterface,  ar
 return nil,nil
 }
 	
-	
+func (t *SimpleChaincode) Dummyfunctionthree(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
+
+	a := args[0]
+	fmt.Printf(a)
+
+return nil,nil
+}	
 	
 	
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
