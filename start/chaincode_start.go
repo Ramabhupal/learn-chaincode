@@ -168,9 +168,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Dummyfunction(stub,args)
 	}else if function == "Ordermilkto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Ordermilkto_Supplier(stub, args)	
-        }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Vieworderby_Supplier(stub, args)	
-	}else if function == "Dummyfunctiontwo"{
+        }else if function == "Dummyfunctiontwo"{
 		return t.Dummyfunctiontwo(stub,args)
 	}
 	fmt.Println("invoke did not find func: " + function)
@@ -275,7 +273,7 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 		fmt.Println("Enough stock is available, Go ahead and deliver for customer")
 		
 //Call Deliver to customer function here
-		b:= Deliverto_Customer(stub,ShipOrder.OrderID)
+		b,_:= Deliverto_Customer(stub,ShipOrder.OrderID)
 		fmt.Println(string(b))
 		
 		return nil, nil
@@ -480,7 +478,7 @@ func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface,  args 
 return nil,nil
 }
 	
-func (t *SimpleChaincode) Dummyfunction2(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
+func (t *SimpleChaincode) Dummyfunctiontwo(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
 	a := args[0]
 	fmt.Printf(a)
