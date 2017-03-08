@@ -172,10 +172,14 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Dummyfunctiontwo(stub,args)
 	}else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Checkstockby_Supplier(stub,args)	
-        }else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Call_Logistics(stub, args)	
         }else if function == "Dummyfunctionthree"{
 		return t.Dummyfunctionthree(stub,args)
+	}else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Call_Logistics(stub, args)	
+        }else if function == "pickuptheproduct" {
+                return t.pickuptheproduct(stub,args)
+        }else if function == "Dummyfunctionfour"{
+		return t.Dummyfunctionfour(stub,args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -652,6 +656,42 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 	return nil,nil
 }
 
+
+func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args []string) ( []byte , error) {
+// So in view order, he will see his orders, clicking on the order will show to whom and which container
+//There will be a button "pickuptheproduct" which is equivalent to real life pick up --status will be in transit
+//There will be one more button there only "Delivertheproduct"
+//As of march 3, lets pass market order Id only as argument
+//How can we update the order placed by market...without a notification
+//here we are passing market order id only
+	//args[0] args[1]
+	// MarketOrderID, ContainerID
+	MarketOrderID := args[0]
+	
+	
+	// fetch the order details and update status as "in transit"
+	orderAsBytes, err := stub.GetState(MarketOrderID)
+	if err != nil {
+		return  nil,errors.New("Failed to get openorders")
+	}
+	MarketOrder := Order{} 
+	json.Unmarshal(orderAsBytes, &MarketOrder)
+	
+	MarketOrder.Status = "In transit to market"
+	 
+	orderAsBytes,err = json.Marshal(MarketOrder)
+	
+	stub.PutState(MarketOrderID,orderAsBytes)
+	
+	fmt.Printf("%+v\n", MarketOrder)
+	
+	fmt.Println("Container is in transit")
+	
+return nil,nil
+}
+
+
+
 	
 func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
@@ -676,7 +716,15 @@ func (t *SimpleChaincode) Dummyfunctionthree(stub shim.ChaincodeStubInterface,  
 
 return nil,nil
 }	
-	
+
+func (t *SimpleChaincode) Dummyfunctionfour(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
+
+	a := args[0]
+	fmt.Printf(a)
+
+return nil,nil
+}	
+
 	
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
