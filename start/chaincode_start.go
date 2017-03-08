@@ -170,7 +170,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Ordermilkto_Supplier(stub, args)	
         }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Vieworderby_Supplier(stub, args)	
-        else if function == "Dummyfunctiontwo"{
+	}else if function == "Dummyfunctiontwo"{
 		return t.Dummyfunctiontwo(stub,args)
 	}
 	fmt.Println("invoke did not find func: " + function)
