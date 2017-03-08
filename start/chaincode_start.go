@@ -172,6 +172,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Dummyfunctiontwo(stub,args)
 	}else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
 		return t.Checkstockby_Supplier(stub,args)	
+        }else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Call_Logistics(stub, args)	
         }else if function == "Dummyfunctionthree"{
 		return t.Dummyfunctionthree(stub,args)
 	}
@@ -607,6 +609,47 @@ if res.ContainerID == id{
 	
 	return nil
 
+}
+
+
+
+func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args []string) ([]byte, error){
+	
+//args[0]   //ToWhom  //Container ID
+//OrderID   //Market   //"1x223"
+	
+// I think its fair only, in practical case, we will tell adrress for a postman to deliver, same thing here also
+//Here Postman is Logistics guy, Receiver is market, letter is Container
+	
+	ShipOrder := SupplierOrder{}
+	ShipOrder.OrderID = args[0]
+	ShipOrder.Towhom = args[1]
+	ShipOrder.ContainerID = args[2]
+	
+	orderAsBytes, _ :=json.Marshal(ShipOrder)
+	stub.PutState( ShipOrder.OrderID, orderAsBytes)
+	
+	fmt.Println("Successfully placed order to Logistics")
+	fmt.Println("%+v\n", ShipOrder)
+	
+	
+	//Add the new Supplier order to market orders list
+	ordersAsBytes, err := stub.GetState(supplierOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get  existing list of  orders placed by Supplier to logistics")
+	}
+	var suporders AllSupplierOrders
+	json.Unmarshal(ordersAsBytes, &suporders)				
+	suporders.SupplierOrdersList  = append(suporders.SupplierOrdersList, ShipOrder);		//append the new order - Openorder
+	fmt.Println(" appended ",ShipOrder.OrderID,"to existing orders placed by Supplier to logistics")
+	jsonAsBytes, _ := json.Marshal(suporders)
+	err = stub.PutState(supplierOrdersStr, jsonAsBytes)		  // Update the value of the key openOrdersStr
+	if err != nil {
+		return nil, err
+        }
+	
+	
+	return nil,nil
 }
 
 	
