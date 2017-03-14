@@ -72,7 +72,8 @@ type AllSupplierOrders struct {
 
 type Asset struct{
 	User string        `json:"user"`
-	ContainerIDs []string `json:"containerIDs"`
+	//ContainerIDs []string `json:"containerIDs"`
+	BatchIDs []string `json:"batchIDs"`
 	NumberofProducts int `json:"numberofproducts"`
 	Supplycoins int `json:"supplycoins"`
 }
@@ -252,18 +253,18 @@ fmt.Printf("%+v\n", Newbatch)
 }
 
 	//Update containerIndexStr	
-	containerAsBytes, err := stub.GetState(batchIndexStr)
+        batchindexAsBytes, err := stub.GetState(batchIndexStr)
 	if err != nil {
 		return  errors.New("Failed to get container index")
 	}
-	var containerIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
-	json.Unmarshal(containerAsBytes, &containerIndex)	
+	var batchIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
+	json.Unmarshal(batchindexAsBytes, &batchIndex)	
 	
 	
-	containerIndex = append(containerIndex, Newbatch.BatchID)          //append the newly created container to the global container list									//add marble name to index list
-	fmt.Println("container indices in the network: ", containerIndex)
-	jsonAsBytes, _ := json.Marshal(containerIndex)
-        err = stub.PutState(batchIndexStr, jsonAsBytes)
+	batchIndex = append(batchIndex, Newbatch.BatchID)          //append the newly created container to the global container list									//add marble name to index list
+	fmt.Println("batch indices in the network: ", batchIndex)
+	batchindexAsBytes, _ = json.Marshal(batchIndex)
+        err = stub.PutState(batchIndexStr, batchindexAsBytes)
 	
 	
 // append the Batch ID to the existing assets of the Supplier
@@ -272,7 +273,7 @@ fmt.Printf("%+v\n", Newbatch)
 	supplierasset := Asset{}
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
 	
-	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, Newbatch.BatchID)
+	supplierasset.BatchIDs = append(supplierasset.BatchIDs, Newbatch.BatchID)
 	supplierasset.NumberofProducts += Newbatch.Quantity
 	supplierassetAsBytes,_=  json.Marshal(supplierasset)
 	stub.PutState("SupplierAssets",supplierassetAsBytes)
@@ -476,7 +477,7 @@ func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,e
 if (Marketasset.LitresofMilk >= quantity ){
 	fmt.Println("Inside deliver to customer, market has quantity")
 	
-	id := Marketasset.ContainerIDs[0]
+	id := Marketasset.BatchIDs[0]
 	
 	
 	milkAsBytes, err := stub.GetState(id) 
@@ -508,9 +509,9 @@ if (Marketasset.LitresofMilk >= quantity ){
   //updating customer assets
 		
 	              Customerasset.LitresofMilk += quantity
-		if ( len(Customerasset.ContainerIDs) == 0){
+		if ( len(Customerasset.BatchIDs) == 0){
 		      fmt.Println("This is the first container of customer")
-	   Customerasset.ContainerIDs = append(Customerasset.ContainerIDs ,id)
+	   Customerasset.BatchIDs = append(Customerasset.BatchIDs ,id)
 		}
 		fmt.Printf("%+v\n", Customerasset)
 			    Marketasset.LitresofMilk -= quantity
@@ -675,7 +676,7 @@ if (supplierasset.LitresofMilk >= quantity ){
 	  }
 */
 	 fmt.Printf("%+v\n", supplierasset)
-	cid := supplierasset.ContainerIDs[0]
+	cid := supplierasset.BatchIDs[0]
 	containerassetAsBytes, _ := stub.GetState(cid)
 	res := MilkContainer{} 
 	json.Unmarshal(containerassetAsBytes,&res)
@@ -851,7 +852,7 @@ func(t *SimpleChaincode)  Deliverto_Market(stub shim.ChaincodeStubInterface, arg
 	fmt.Println("Updating ",userAssets)
 	asset.LitresofMilk += container.Userlist[0].Litres
 	fmt.Println("appending", ContainerID,"to Market container id list")
-        asset.ContainerIDs = append(asset.ContainerIDs,ContainerID)
+        asset.BatchIDs = append(asset.BatchIDs,ContainerID)
        fmt.Printf("%+v\n", asset)
 //update supplierassets
 	
@@ -860,11 +861,11 @@ func(t *SimpleChaincode)  Deliverto_Market(stub shim.ChaincodeStubInterface, arg
 	
 	//WRITE A CODE  to remove that container id from supplier id list
 		
-		for i := 0 ;i < len(supplierasset.ContainerIDs);i++{
+		for i := 0 ;i < len(supplierasset.BatchIDs);i++{
 	
-            if(supplierasset.ContainerIDs[i] == ContainerID){
+            if(supplierasset.BatchIDs[i] == ContainerID){
 
-            supplierasset.ContainerIDs =  append(supplierasset.ContainerIDs[:i],supplierasset.ContainerIDs[i+1:]...)
+            supplierasset.BatchIDs =  append(supplierasset.BatchIDs[:i],supplierasset.BatchIDs[i+1:]...)
            break
        }	
 }
