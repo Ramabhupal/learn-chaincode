@@ -13,7 +13,8 @@ import (
 type SimpleChaincode struct {
 }
 
-var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs	
+//var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs	
+vat batchIndexStr = "_batchindex"
 
 
 var openOrdersStr = "_openorders"	  // This will be the key, value will be a list of orders(technically - array of order structs)
@@ -72,7 +73,7 @@ type AllSupplierOrders struct {
 type Asset struct{
 	User string        `json:"user"`
 	ContainerIDs []string `json:"containerIDs"`
-	LitresofMilk int `json:"litresofmilk"`
+	NumberofProducts int `json:"numberofproducts"`
 	Supplycoins int `json:"supplycoins"`
 }
 
@@ -110,10 +111,11 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	
        var empty []string
        jsonAsBytes, _ := json.Marshal(empty)                                   //create an empty array of string
-       err = stub.PutState(containerIndexStr, jsonAsBytes)                     //Resetting - Making milk container list as empty 
+       err = stub.PutState(batchIndexStr, jsonAsBytes)                     //Resetting - Making milk container list as empty 
        if err != nil {
 		return nil, err
         }  
+	
 	
 /*making no of batches to zero*/
 	Count = 0
@@ -206,8 +208,8 @@ func  Create_Batch(stub shim.ChaincodeStubInterface, args ) ( error) {
 //No of batches in string format
 	
 var err error
-Quantityofbatches := strconv.Atoi(args)             // No of batches to be created
-Productperbatch := 10
+Quantityofbatches,_ := strconv.Atoi(args)             // No of batches to be created
+Productsperbatch := 10
 user := "Supplier"
 status := "Manufactured"
 	
@@ -217,11 +219,28 @@ for j:=0;j<Quantityofbatches;j++{
         count += 1 
 	batchid := "Batch"+strconv.Itoa(count)           //This has to be linked to QR Code generated later on
 	fmt.Println(batchid)	
+	
+	batchAsBytes, err := stub.GetState(batchid) 
+        if err != nil {
+		return  errors.New("Failed to get details of given id") 
+        }
+
+
 	Newbatch := Batch{}
+	json.Unmarshal(batchAsBytes, &Newbatch)
+
+if  Newbatch.BatchID == batchid{
+
+        fmt.Println("batch already exixts")
+        fmt.Println("%+v\n",Newbatch)
+        return errors.New("This batch already exists")
+}
+
+//If not der, creating
 	Newbatch.BatchID = batchid
         Newbatch.User = user
         Newbatch.Status = status
-        Newbatch.Quantity = 10
+        Newbatch.Quantity = Productsperbatch
     
 	for i:=0; i < Newbatch.Quantity ;i++{
 	Newbatch.Productlist[i].User =  user
@@ -232,7 +251,40 @@ for j:=0;j<Quantityofbatches;j++{
 fmt.Printf("%+v\n", Newbatch)
 }
 
+	//Update containerIndexStr	
+	containerAsBytes, err := stub.GetState(batchIndexStr)
+	if err != nil {
+		return  errors.New("Failed to get container index")
+	}
+	var containerIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
+	json.Unmarshal(containerAsBytes, &containerIndex)	
 	
+	
+	containerIndex = append(containerIndex, Newbatch.BatchID)          //append the newly created container to the global container list									//add marble name to index list
+	fmt.Println("container indices in the network: ", containerIndex)
+	jsonAsBytes, _ := json.Marshal(containerIndex)
+        err = stub.PutState(batchIndexStr, jsonAsBytes)
+	
+	
+// append the Batch ID to the existing assets of the Supplier
+	
+	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	supplierasset := Asset{}
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	
+	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, Newbatch.BatchID)
+	supplierasset.NumberofProducts += Newbatch.Quantity
+	supplierassetAsBytes,_=  json.Marshal(supplierasset)
+	stub.PutState("SupplierAssets",supplierassetAsBytes)
+	fmt.Println("Balance of Supplier")
+        fmt.Printf("%+v\n", supplierasset)
+    //double checking
+	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	fmt.Printf("%+v\n", supplierasset)
+	
+
 	
 return nil
 }
