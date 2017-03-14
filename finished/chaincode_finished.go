@@ -250,7 +250,7 @@ if  Newbatch.BatchID == batchid{
 	}
 
 fmt.Printf("%+v\n", Newbatch)
-}
+
 
 	//Update containerIndexStr	
         batchindexAsBytes, err := stub.GetState(batchIndexStr)
@@ -287,7 +287,7 @@ fmt.Printf("%+v\n", Newbatch)
 	
 
 	
-return nil
+
 }
 
 	
@@ -295,7 +295,7 @@ return nil
 	
 	
 	
-	return nil
+return nil
 
 }
 
