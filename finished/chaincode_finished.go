@@ -23,12 +23,13 @@ var customerOrdersStr = "_customerorders"    // This will  be the key, value wil
 var supplierOrdersStr = "_supplierorders"     // this will be key, value will be a list of orders placed by supplier to logistics
 
 
-Count := 0
-
+Count := 0                             //To keep count of Boxes created
+//In our case product is a discrete one like Pen, biscuit packet etc
 type Product struct{
-       User string                     `json:"user"`
-       Status string                   `json:"status"`
        ProductID string               `json:"productid"`
+	User string                     `json:"user"`
+       Status string                   `json:"status"`
+       
 }
 
 
@@ -200,69 +201,44 @@ return nil, errors.New("Received unknown function invocation: " + function)
 
 
 func  Create_Batch(stub shim.ChaincodeStubInterface, args ) ( error) {
+
+//args
+//No of batches in string format
+	
 var err error
-
- 
-id := count + 1
+Quantityofbatches := strconv.Atoi(args)             // No of batches to be created
+Productperbatch := 10
 user := "Supplier"
+status := "Manufactured"
 	
 	
-// Checking if the container already exists in the network
-milkAsBytes, err := stub.GetState(id) 
-if err != nil {
-		return  errors.New("Failed to get details of given id") 
-}
-
-res := MilkContainer{} 
-json.Unmarshal(milkAsBytes, &res)
-
-if res.ContainerID == id{
-
-        fmt.Println("Container already exixts")
-        fmt.Println("%+v\n",res)
-        return errors.New("This container already exists")
-}
-
-//If not present, create it and Update ledger, containerIndexStr, Assets of Supplier
-//Creation
-        res.ContainerID = id
-	res.Userlist[0].User=user
-	res.Userlist[0].Litres = litres
-	milkAsBytes, _ =json.Marshal(res)
-        stub.PutState(res.ContainerID,milkAsBytes)
-	fmt.Printf("Container created successfully, details are %+v\n", res)
-
-//Update containerIndexStr	
-	containerAsBytes, err := stub.GetState(containerIndexStr)
-	if err != nil {
-		return  errors.New("Failed to get container index")
+for j:=0;j<Quantityofbatches;j++{
+//Each time this outer loop runs a new batch of products is created
+        count += 1 
+	batchid := "Batch"+strconv.Itoa(count)           //This has to be linked to QR Code generated later on
+	fmt.Println(batchid)	
+	Newbatch := Batch{}
+	Newbatch.BatchID = batchid
+        Newbatch.User = user
+        Newbatch.Status = status
+        Newbatch.Quantity = 10
+    
+	for i:=0; i < Newbatch.Quantity ;i++{
+	Newbatch.Productlist[i].User =  user
+	Newbatch.Productlist[i].ProductID = "prod"+strconv.Itoa(count)+"."+strconv.Itoa(i)
+	Newbatch.Productlist[i].Status = status
 	}
-	var containerIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
-	json.Unmarshal(containerAsBytes, &containerIndex)	
+
+fmt.Printf("%+v\n", Newbatch)
+}
+
 	
 	
-	containerIndex = append(containerIndex, res.ContainerID)          //append the newly created container to the global container list									//add marble name to index list
-	fmt.Println("container indices in the network: ", containerIndex)
-	jsonAsBytes, _ := json.Marshal(containerIndex)
-        err = stub.PutState(containerIndexStr, jsonAsBytes)
+return nil
+}
+
 	
-// append the container ID to the existing assets of the Supplier
 	
-	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function 
-	supplierasset := Asset{}
-	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-	
-	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, res.ContainerID)
-	supplierasset.LitresofMilk += res.Userlist[0].Litres
-	supplierassetAsBytes,_=  json.Marshal(supplierasset)
-	stub.PutState("SupplierAssets",supplierassetAsBytes)
-	fmt.Println("Balance of Supplier")
-        fmt.Printf("%+v\n", supplierasset)
-    //double checking
-	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function 
-	
-	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-	fmt.Printf("%+v\n", supplierasset)
 	
 	
 	
