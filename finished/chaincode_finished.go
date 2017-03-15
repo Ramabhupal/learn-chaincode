@@ -41,7 +41,7 @@ type Batch struct{
        Productlist []string      `json:"productlist"`
        Owner string                 `json:"owner"`
        Status string                `json:"status"`
-
+      // Flag int                      `json:"flag"`
 }
 
 type Order struct{
@@ -768,9 +768,9 @@ func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args
 	//args[0] args[1]
 	// MarketOrderID, BatchID
 	RetailerOrderID := args[0]
+	SupplierOrderID := args[1]
 
-
-	// fetch the order details and update status as "in transit"
+// fetch the order details and update status as "in transit"
 	orderAsBytes, err := stub.GetState(RetailerOrderID)
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
@@ -785,6 +785,34 @@ func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args
 	stub.PutState(RetailerOrderID,orderAsBytes)
 
 	fmt.Printf("%+v\n", RetailerOrder)
+	
+	supplierorderAsBytes, err := stub.GetState(RetailerOrderID)
+	if err != nil {
+		return  nil,errors.New("Failed to get openorders")
+	}
+	Supplierorder := SupplierOrder{}
+	json.Unmarshal(supplierorderAsBytes, &Supplierorder)
+//updating status of batch	
+	batchAsBytes,err := stub.GetState(Supplierorder.BatchID)
+	Newbatch := Batch{}
+	
+	json.Unmarshal(batchAsBytes, &Newbatch)
+	
+	Newbatch.Status = RetailerOrder.Status
+//updating status of individual products	
+	for i:=0;i<len(Newbatch.Productlist);i++{
+	
+	
+			  Newproduct := Product{}
+                          productasbytes ,_ := stub.GetState(Newbatch.Productlist[i])
+		          json.Unmarshal(productasbytes,&Newproduct)
+			  Newproduct.Status = RetailerOrder.Status
+			  productasbytes ,_ = json.Marshal( Newproduct)
+			  stub.PutState( Newproduct.ProductID,productasbytes)
+        }
+         
+	batchAsBytes,_ = json.Marshal(Newbatch)
+	stub.PutState(Newbatch.BatchID, batchAsBytes)	 
 
 	fmt.Println("Batch  is in transit")
 
@@ -800,7 +828,7 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 
 //So here we will set the Owner name in container ID to the one in Order ID and Status to Delivered - Asset Transfer
 // Why should logistics guy check if the supplier actually holds the container?????????
-	fmt.Println("Delivering the container to Retailer")
+	fmt.Println("Delivering the batch to Retailer")
 	OrderID := args[0]
 
 //fetch order details
@@ -812,14 +840,27 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 	json.Unmarshal(orderAsBytes, &ShipOrder)
 
 	BatchID := ShipOrder.BatchID
-//fetch container details
+//fetch batch details
 	assetAsBytes,err := stub.GetState(BatchID)
 	Newbatch := Batch{}
 	json.Unmarshal(assetAsBytes, &Newbatch)
 
-	if (Newbatch.Owner == "Supplier"){
+if (Newbatch.Owner == "Supplier"){
+//Transfer batch ownership and Update status of Batch
+	Newbatch.Owner = "Retailer"         //ASSET TRANSFER  //This should be ShipOrder.Towhom in general case
+	Newbatch.Status = "At Retailer and healthy"
+//updating status of individual products	
+	for i:=0;i<len(Newbatch.Productlist);i++{
+	
+	
+			  Newproduct := Product{}
+                          productasbytes ,_ := stub.GetState(Newbatch.Productlist[i])
+		          json.Unmarshal(productasbytes,&Newproduct)
+			  Newproduct.Status = "At Retailer and healthy"
+			  productasbytes ,_ = json.Marshal( Newproduct)
+			  stub.PutState( Newproduct.ProductID,productasbytes)
+        }
 
-	Newbatch.Owner = "Retailer"         //ASSET TRANSFER
 	fmt.Println("%+v\n", Newbatch)
 	fmt.Println("pushing the updated Batch back to ledger")
 	assetAsBytes,err = json.Marshal(Newbatch)
@@ -845,7 +886,7 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 	fmt.Println("Updating Supplier assets..")
 	supplierasset.NumberofProducts -= Newbatch.Quantity
 
-	//WRITE A CODE  to remove that container id from supplier id list
+	//WRITE A CODE  to remove that batchid from supplier batchids list
 
 		for i := 0 ;i < len(supplierasset.BatchIDs);i++{
 
