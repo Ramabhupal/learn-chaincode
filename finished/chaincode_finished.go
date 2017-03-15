@@ -14,7 +14,7 @@ type SimpleChaincode struct {
 }
 
 //var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs
-vat batchIndexStr = "_batchindex"
+var batchIndexStr = "_batchindex"
 
 
 var openOrdersStr = "_openorders"	  // This will be the key, value will be a list of orders(technically - array of order structs)
@@ -24,7 +24,7 @@ var customerOrdersStr = "_customerorders"    // This will  be the key, value wil
 var supplierOrdersStr = "_supplierorders"     // this will be key, value will be a list of orders placed by supplier to logistics
 
 
-Count := 0                             //To keep count of Boxes created
+var Count int                          //To keep count of Boxes created
 //In our case product is a discrete one like Pendrive, hard disk etc
 type Product struct{
        ProductID string               `json:"productid"`
@@ -36,7 +36,7 @@ type Product struct{
 
 
 type Batch struct{
-       BatchID string               `json:"batch`id"`
+       BatchID string               `json:"batchid"`
        Quantity int                 `json:"quantity"`
        Productlist []Product      `json:"productlist"`
        Owner string                 `json:"owner"`
@@ -204,7 +204,7 @@ return nil, errors.New("Received unknown function invocation: " + function)
 
 
 
-func  Create_Batch(stub shim.ChaincodeStubInterface, args ) ( error) {
+func  Create_Batch(stub shim.ChaincodeStubInterface, args string ) ( error) {
 
 //args
 //No of batches in string format
@@ -682,7 +682,7 @@ if (len(supplierasset.BatchIDs) >= quantity  ){
   }else{
 	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
 		b := strconv.Itoa(quantity)
-	 Create_milkcontainer(stub,b)
+	 Create_Batch(stub,b)
 
 
 	       // fmt.Println("Successfully created container, check stock again to know your container details ")
