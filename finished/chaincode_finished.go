@@ -256,7 +256,7 @@ if  Newbatch.BatchID == batchid{
 	}
 
 fmt.Printf("%+v\n", Newbatch)
-	batchAsBytes,_ := json.Marshal(Newbatch)
+	batchAsBytes,_ = json.Marshal(Newbatch)
 	stub.PutState(Newbatch.BatchID,batchAsBytes)
 
 	//Update batchIndexStr
