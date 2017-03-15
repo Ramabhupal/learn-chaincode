@@ -256,9 +256,10 @@ if  Newbatch.BatchID == batchid{
 	}
 
 fmt.Printf("%+v\n", Newbatch)
+	batchAsBytes,_ := json.Marshal(Newbatch)
+	stub.PutState(Newbatch.BatchID,batchAsBytes)
 
-
-	//Update containerIndexStr
+	//Update batchIndexStr
         batchindexAsBytes, err := stub.GetState(batchIndexStr)
 	if err != nil {
 		return  errors.New("Failed to get container index")
