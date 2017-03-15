@@ -514,7 +514,8 @@ if (Retailerasset.NumberofProducts >= quantity ){
 
 
 					Newproduct := Product{}
-productasbytes ,_ := json.Marshal(CustomerAssets.BatchIDs[i])
+productasbytes ,_ := stub.GetState(CustomerAssets.BatchIDs[i])
+		json.Unmarshal(productasbytes,&Newproduct)
 					Newproduct.Status = "Delivered to customer"
 					Newproduct.Owner = "Customer"
 					productasbytes ,_ = json.Marshal( Newproduct)
