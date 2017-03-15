@@ -209,7 +209,7 @@ func  Create_Batch(stub shim.ChaincodeStubInterface, args string ) ( error) {
 //args
 //No of batches in string format
 
-var err error
+//var err error
 Quantityofbatches,_ := strconv.Atoi(args)             // No of batches to be created
 Productsperbatch := 10
 owner := "Supplier"
