@@ -819,7 +819,7 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 
 	if (Newbatch.Owner == "Supplier"){
 
-	Newbatch.Owner = "Market"         //ASSET TRANSFER
+	Newbatch.Owner = "Retailer"         //ASSET TRANSFER
 	fmt.Println("%+v\n", Newbatch)
 	fmt.Println("pushing the updated Batch back to ledger")
 	assetAsBytes,err = json.Marshal(Newbatch)
@@ -837,7 +837,7 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 //update market assets
 	fmt.Println("Updating ",OwnerAssets)
 	asset.NumberofProducts += Newbatch.Quantity
-	fmt.Println("appending", BatchID,"to Market container id list")
+	fmt.Println("appending", BatchID,"to Retailer batch id list")
         asset.BatchIDs = append(asset.BatchIDs,BatchID)
        fmt.Printf("%+v\n", asset)
 //update supplierassets
@@ -872,18 +872,18 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
 	assetAsBytes,_ = stub.GetState(OwnerAssets)        // The same key which we used in Init function
 	json.Unmarshal( assetAsBytes, &asset)
 	 fmt.Printf("%+v\n", asset)
-//update the MarketOrder and push back to ledger
+//update the RetailerOrder and push back to ledger
 
-	MarketOrderID := args[1]
-        orderAsBytes, err = stub.GetState(MarketOrderID)
+	RetailerOrderID := args[1]
+        orderAsBytes, err = stub.GetState(RetailerOrderID)
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
-	MarketOrder := Order{}
-	json.Unmarshal(orderAsBytes, &MarketOrder)
-	MarketOrder.Status = "Delivered to market"
-	orderAsBytes,err = json.Marshal(MarketOrder)
-	stub.PutState(MarketOrderID,orderAsBytes)
+	RetailerOrder := Order{}
+	json.Unmarshal(orderAsBytes, &RetailerOrder)
+	RetailerOrder.Status = "Delivered to market"
+	orderAsBytes,err = json.Marshal(RetailerOrder)
+	stub.PutState(RetailerOrderID,orderAsBytes)
 	fmt.Printf("%+v\n", ShipOrder)
 
 
@@ -898,7 +898,7 @@ func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, a
         {
                 stub.PutState("delivertomarket",[]byte("failure in this function"))
                 //t.read(stub,"setOwner")
-								fmt.Printf("Failure in Deliverto_Market")
+								fmt.Printf("Failure in Deliverto_Retailer")
                 return nil,nil
         }
 
@@ -928,12 +928,12 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 	json.Unmarshal(assetAsBytes, &Deliveredbatch)
 
 //check and transfer coins
-	if (Deliveredbatch.Owner == "Market" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
+	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
 
 		fmt.Println("Thanks, I got  the right product, transferring amount to Supplier/Manufacturer")
 		var b [3]string
 		b[0]= strconv.Itoa(ShipOrder.Quantity *30)   //price per batch 30
-		b[1] = "Market"
+		b[1] = "Retailer"
 		b[2] = "Supplier"
 
 		err = transfer(stub,b)
