@@ -508,13 +508,13 @@ if (Retailerasset.NumberofProducts >= quantity ){
     Retailerasset.NumberofProducts -= quantity
     Customerasset.NumberofProducts += quantity
 
-	 Customerasset.BatchIDs = append(Customerasset.BatchIDs,Newbatch.Productlist[0:quantity])  //adding prod id to customer i.e now the product is with customer
+	 Customerasset.BatchIDs = append(Customerasset.BatchIDs,Newbatch.Productlist[0:quantity]...)  //adding prod id to customer i.e now the product is with customer
 	 Newbatch.Productlist = Newbatch.Productlist[quantity:]     //Remving the products from the box
         for  k:=0;k<len(Customerasset.BatchIDs);k++{
 
 
 					Newproduct := Product{}
-productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[i])
+productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[k])
 		json.Unmarshal(productasbytes,&Newproduct)
 					Newproduct.Status = "Delivered to customer"
 					Newproduct.Owner = "Customer"
@@ -531,7 +531,7 @@ productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[i])
 	stub.PutState("CustomerAssets",customerassetAsBytes)
 
 	 retailerassetAsBytes,_ = json.Marshal(Retailerasset)
-	 stub.PutState(Retailerasset,retailerassetAsBytes)
+	 stub.PutState("RetailerAssets",retailerassetAsBytes)
 
 	 batchAsBytes,_ = json.Marshal(Newbatch)
 	 stub.PutState(Newbatch.BatchID,batchAsBytes)
@@ -674,7 +674,7 @@ if (len(supplierasset.BatchIDs) >= quantity  ){
 		fmt.Printf("%+v\n", supplierasset)
 	  cid := supplierasset.BatchIDs[0]
 	  batchassetAsBytes, _ := stub.GetState(cid)
-	  Newbatch := MilkContainer{}
+	  Newbatch := Batch{}
 	  json.Unmarshal(batchassetAsBytes,&Newbatch)
 
 	  fmt.Printf("%+v\n", Newbatch)
@@ -939,7 +939,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 		if err!=nil{
 			return err
 		}
-	  b[0]= strconv.Itoa(ShipOrder.Quantity *30 * 0.25)
+	  b[0]= strconv.Itoa(25)
 		b[1] = "Supplier"
 		b[2] = "Logistics"
 		err = transfer(stub,b)
