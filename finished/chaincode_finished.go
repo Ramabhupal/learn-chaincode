@@ -38,7 +38,7 @@ type Product struct{
 type Batch struct{
        BatchID string               `json:"batchid"`
        Quantity int                 `json:"quantity"`
-       Productlist []Product      `json:"productlist"`
+       Productlist []string      `json:"productlist"`
        Owner string                 `json:"owner"`
        Status string                `json:"status"`
 
@@ -218,8 +218,8 @@ status := "Manufactured"
 
 for j:=0;j<Quantityofbatches;j++{
 //Each time this outer loop runs a new batch of products is created
-        count += 1
-	batchid := "Batch"+strconv.Itoa(count)           //This has to be linked to QR Code generated later on
+        Count += 1
+	batchid := "Batch"+strconv.Itoa(Count)           //This has to be linked to QR Code generated later on
 	fmt.Println(batchid)
 
 	batchAsBytes, err := stub.GetState(batchid)
@@ -246,7 +246,7 @@ if  Newbatch.BatchID == batchid{
 
 	for i:=0; i < Newbatch.Quantity ;i++{
 	 	 Newproduct := Product{}
-	   Newproduct.ProductID = "prod"+strconv.Itoa(count)+"."+strconv.Itoa(i)
+	   Newproduct.ProductID = "prod"+strconv.Itoa(Count)+"."+strconv.Itoa(i)
      Newproduct.Owner = owner
      Newproduct.Status = status
      productasbytes ,_ := json.Marshal( Newproduct)
@@ -508,13 +508,13 @@ if (Retailerasset.NumberofProducts >= quantity ){
     Retailerasset.NumberofProducts -= quantity
     Customerasset.NumberofProducts += quantity
 
-	 CustomerAssets.BatchIDs = append(CustomerAssets.BatchIDs,Newbatch.Productlist[0:quantity])  //adding prod id to customer i.e now the product is with customer
+	 Customerasset.BatchIDs = append(Customerasset.BatchIDs,Newbatch.Productlist[0:quantity])  //adding prod id to customer i.e now the product is with customer
 	 Newbatch.Productlist = Newbatch.Productlist[quantity:]     //Remving the products from the box
-        for  k:=0;k<len(CustomerAssets.BatchIDs);k++{
+        for  k:=0;k<len(Customerasset.BatchIDs);k++{
 
 
 					Newproduct := Product{}
-productasbytes ,_ := stub.GetState(CustomerAssets.BatchIDs[i])
+productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[i])
 		json.Unmarshal(productasbytes,&Newproduct)
 					Newproduct.Status = "Delivered to customer"
 					Newproduct.Owner = "Customer"
@@ -792,7 +792,7 @@ return nil,nil
 
 
 
-func(t *SimpleChaincode)  Deliverto_Market(stub shim.ChaincodeStubInterface, args []string) ([]byte , error) {
+func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte , error) {
 
 // SupplierOrderID      //MarketOrderID
 //args[0]               //args[1]
