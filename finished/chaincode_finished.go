@@ -28,7 +28,7 @@ var Count int                          //To keep count of Boxes created
 //In our case product is a discrete one like Pendrive, hard disk etc
 type Product struct{
        ProductID string               `json:"productid"`
-	     Owner string                     `json:"owner"`
+       Owner string                     `json:"owner"`
        Status string                   `json:"status"`
 
 }
@@ -46,7 +46,7 @@ type Batch struct{
 
 type Order struct{
        OrderID string                  `json:"orderid"`
-       Owner string                     `json:"owner"`
+       User string                     `json:"user"`
        Status string                   `json:"status"`
        Quantity int                      `json:"quantity"`
 }
@@ -342,7 +342,7 @@ func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterfa
 
 
 	Openorder := Order{}
-        Openorder.Owner = "customer"
+        Openorder.User = "customer"
         Openorder.Status = "Order received by Retailer"
         Openorder.OrderID = args[0]
         Openorder.Quantity, err = strconv.Atoi(args[1])  ///No of units of product the customer wants
@@ -591,7 +591,7 @@ quantity := CustomerOrder.Quantity
 //Generating market order
 
 Openorder := Order{}
-Openorder.Owner = "Retailer"
+Openorder.User = "Retailer"
 Openorder.Status = "Order placed to Supplier "
 Openorder.OrderID = args[1]
 Openorder.Quantity = ((quantity - (quantity % 10)) /10) + 1 //Rounding to the nearest number of boxes that can suffice for the quantity asked by customer
