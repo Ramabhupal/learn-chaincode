@@ -7,11 +7,16 @@ import (
 	"encoding/json"
 	"strconv"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"math/rand"
 )
 
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
+
+
+var letters = []rune("1234567890")
+
 
 //var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs
 var batchIndexStr = "_batchindex"
@@ -336,6 +341,15 @@ return nil,nil
 
 
 
+func randSeq(n int) string {
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = letters[rand.Intn(len(letters))]
+    }
+    return string(b)
+}
+
+
 func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //args[0]      args[1]
 //"cus123"       "10"
@@ -346,8 +360,10 @@ func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterfa
 	Openorder := Order{}
         Openorder.User = "customer"
         Openorder.Status = "Order received by Retailer"
-        Openorder.OrderID = args[0]
-        Openorder.Quantity, err = strconv.Atoi(args[1])  ///No of units of product the customer wants
+        //Openorder.OrderID = args[0]
+	Openorder.OrderID = randSeq(10)
+      //  Openorder.Quantity, err = strconv.Atoi(args[1])  ///No of units of product the customer wants
+	Openorder.Quantity, err = strconv.Atoi(args[0])
 	if err != nil {
 		return nil, errors.New(" No of products must be a numeric string")
 	}
