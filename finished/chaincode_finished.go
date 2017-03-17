@@ -805,7 +805,7 @@ func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args
 
 	fmt.Printf("%+v\n", RetailerOrder)
 	
-	supplierorderAsBytes, err := stub.GetState(RetailerOrderID)
+	supplierorderAsBytes, err := stub.GetState(SupplierOrderID)
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
 	}
