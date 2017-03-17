@@ -57,6 +57,8 @@ type SupplierOrder struct {
         OrderID string                `json:"orderid"`
 	Towhom string                 `json:"towhom"`
 	BatchID string            `json:"BatchID"`
+ 	User string                `json:"supplier"`
+
 
 }
 
@@ -705,6 +707,7 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 	ShipOrder.OrderID = args[0]
 	ShipOrder.Towhom = args[1]
 	ShipOrder.BatchID = args[2]
+	ShipOrder.User = "Supplier"
 
 	orderAsBytes, _ :=json.Marshal(ShipOrder)
 	stub.PutState( ShipOrder.OrderID, orderAsBytes)
