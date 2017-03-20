@@ -756,9 +756,17 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 
 // I think its fair only, in practical case, we will tell adrNewbatchs for a postman to deliver, same thing here also
 //Here Postman is Logistics guy, Receiver is market, letter is Container
-
+//fetching the entire history of supplier orders
+	ordersAsBytes, err := stub.GetState(supplierOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get  existing list of  orders placed by Supplier to logistics")
+	}
+	var suporders AllSupplierOrders
+	json.Unmarshal(ordersAsBytes, &suporders)
+	
+	
 	ShipOrder := SupplierOrder{}
-	ShipOrder.OrderID = "Customerorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+	ShipOrder.OrderID = "Supplierorder"+ strconv.Itoa(len(suporders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
 	
 	ShipOrder.Towhom = args[0]
 	ShipOrder.BatchID = args[1]
@@ -773,12 +781,6 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 
 
 	//Add the new Supplier order to market orders list
-	ordersAsBytes, err := stub.GetState(supplierOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
-	if err != nil {
-		return nil, errors.New("Failed to get  existing list of  orders placed by Supplier to logistics")
-	}
-	var suporders AllSupplierOrders
-	json.Unmarshal(ordersAsBytes, &suporders)
 	suporders.SupplierOrdersList  = append(suporders.SupplierOrdersList, ShipOrder);		//append the new order - Openorder
 	fmt.Println(" appended ",ShipOrder.OrderID,"to existing orders placed by Supplier to logistics")
 	jsonAsBytes, _ := json.Marshal(suporders)
@@ -915,6 +917,7 @@ if (Newbatch.Owner == "Supplier"){
 			  Newproduct := Product{}
                           productasbytes ,_ := stub.GetState(Newbatch.Productlist[i])
 		          json.Unmarshal(productasbytes,&Newproduct)
+		Newproduct.Owner = "Retailer"
 			  Newproduct.Status = "At Retailer and healthy"
 			  productasbytes ,_ = json.Marshal( Newproduct)
 			  stub.PutState( Newproduct.ProductID,productasbytes)
@@ -1026,6 +1029,9 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
        assetAsBytes,_ := stub.GetState(BatchID)
 	Deliveredbatch := Batch{}
 	json.Unmarshal(assetAsBytes, &Deliveredbatch)
+	fmt.Printf("%+v\n", ShipOrder)
+	fmt.Printf("%+v\n", Deliveredbatch)
+	
 
 //check and transfer coins
 	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
@@ -1049,6 +1055,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 		}
 		return nil
 }else{
+		
     stub.PutState("checktheproduct",[]byte("failure"))
 		fmt.Println("I didn't get the right product")
     return nil
