@@ -758,9 +758,10 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 //Here Postman is Logistics guy, Receiver is market, letter is Container
 
 	ShipOrder := SupplierOrder{}
-	ShipOrder.OrderID = args[0]
-	ShipOrder.Towhom = args[1]
-	ShipOrder.BatchID = args[2]
+	ShipOrder.OrderID = "Customerorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+	
+	ShipOrder.Towhom = args[0]
+	ShipOrder.BatchID = args[1]
 	ShipOrder.User = "Supplier"
 	ShipOrder.Timestamp = getTimestamp()
 
