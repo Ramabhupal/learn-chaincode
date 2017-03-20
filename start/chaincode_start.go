@@ -57,11 +57,14 @@ type Batch struct{
 type Order struct{
        OrderID string                  `json:"orderid"`
 	Item string                  `json:"item"`
-	Timestamp int64                `json:"timestamp"`
-       Price int                       `json:"price"`
-       User string                     `json:"user"`
-       Status string                   `json:"status"`
+	
        Quantity int                      `json:"quantity"`
+	
+       Price int                       `json:"price"`
+	
+       Status string                   `json:"status"`
+     Timestamp int64                `json:"timestamp"`
+       User string                     `json:"user"`
 }
 
 // Quantity implies Batch if order placed by Retailer, product if placed by Customer
@@ -387,7 +390,7 @@ func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterfa
         Openorder.Status = "Order received by Retailer"
 	
 	fmt.Println("Hello customer, your order has been generated successfully, you can track it with id in the following details")
-	fmt.Println("%+v\n",Openorder)
+	fmt.Printf("%+v\n", Openorder)
         orderAsBytes,_ := json.Marshal(Openorder)
 	stub.PutState(Openorder.OrderID,orderAsBytes)
 
@@ -556,7 +559,7 @@ if (Retailerasset.NumberofProducts >= quantity ){
 		Newbatch.Quantity -= quantity // bringing down the Retailer share of it
     Retailerasset.NumberofProducts -= quantity
     Customerasset.NumberofProducts += quantity
-
+Customerasset.Item = ShipOrder.Item
 	 Customerasset.BatchIDs = append(Customerasset.BatchIDs,Newbatch.Productlist[0:quantity]...)  //adding prod id to customer i.e now the product is with customer
 	 Newbatch.Productlist = Newbatch.Productlist[quantity:]     //Remving the products from the box
         for  k:=0;k<len(Customerasset.BatchIDs);k++{
@@ -604,8 +607,8 @@ productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[k])
                         stub.PutState(customerOrdersStr,  customerordersAsBytes)
 			}
 	       }
-
-		b := [3]string{"30", "Customer", "Retailer"}
+		transferamount= strconv.Itoa(ShipOrder.Price)
+		b := [3]string{transferamount, "Customer", "Retailer"}
 	           transfer(stub,b)        //Transfer should be automated. So it can't be invoked from UI..Loop hole
 	               fmt.Println("FINALLLLLYYYY, END OF THE STORY")
 
@@ -940,6 +943,7 @@ if (Newbatch.Owner == "Supplier"){
 //update market assets
 	fmt.Println("Updating ",OwnerAssets)
 	asset.NumberofProducts += Newbatch.Quantity
+	asset.Item = ShipOrder.Item
 	fmt.Println("appending", BatchID,"to Retailer batch id list")
         asset.BatchIDs = append(asset.BatchIDs,BatchID)
        fmt.Printf("%+v\n", asset)
@@ -1038,7 +1042,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 
 		fmt.Println("Thanks, I got  the right product, transferring amount to Supplier/Manufacturer")
 		var b [3]string
-		b[0]= strconv.Itoa(ShipOrder.Quantity *30)   //price per batch 30
+		b[0]= strconv.Itoa(ShipOrder.Price)   
 		b[1] = "Retailer"
 		b[2] = "Supplier"
 
@@ -1046,7 +1050,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 		if err!=nil{
 			return err
 		}
-	  b[0]= strconv.Itoa(25)
+	  b[0]= strconv.Itoa(ShipOrder.Price * 0.25)       //25 percent of what supplier gets
 		b[1] = "Supplier"
 		b[2] = "Logistics"
 		err = transfer(stub,b)
