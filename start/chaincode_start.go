@@ -7,13 +7,19 @@ import (
 	"encoding/json"
 	"strconv"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"math/rand"
 )
 
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
 
-var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs	
+
+var letters = []rune("1234567890")
+
+
+//var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs
+var batchIndexStr = "_batchindex"
 
 
 var openOrdersStr = "_openorders"	  // This will be the key, value will be a list of orders(technically - array of order structs)
@@ -22,32 +28,43 @@ var customerOrdersStr = "_customerorders"    // This will  be the key, value wil
 
 var supplierOrdersStr = "_supplierorders"     // this will be key, value will be a list of orders placed by supplier to logistics
 
-type userandlitres struct{
-	User string        `json:"user"`
-	Litres int       `json:"litres"`
+
+var Count int                          //To keep count of Boxes created
+//In our case product is a discrete one like Pendrive, hard disk etc
+type Product struct{
+       ProductID string               `json:"productid"`
+       Owner string                     `json:"owner"`
+       Status string                   `json:"status"`
+
 }
 
-type MilkContainer struct{
 
-        ContainerID string `json:"containerid"`
-	Userlist  [2]userandlitres    `json:"userlist"`
 
+type Batch struct{
+       BatchID string               `json:"batchid"`
+       Quantity int                 `json:"quantity"`
+       Productlist []string      `json:"productlist"`
+       Owner string                 `json:"owner"`
+       Status string                `json:"status"`
+      // Flag int                      `json:"flag"`
 }
 
 type Order struct{
        OrderID string                  `json:"orderid"`
        User string                     `json:"user"`
        Status string                   `json:"status"`
-       Litres int                      `json:"litres"`
+       Quantity int                      `json:"quantity"`
 }
 
-
+// Quantity implies Batch if order placed by Retailer, product if placed by Customer
 type SupplierOrder struct {
-   
+
         OrderID string                `json:"orderid"`
 	Towhom string                 `json:"towhom"`
-	ContainerID string            `json:"containerid"`
-	
+	BatchID string            `json:"BatchID"`
+ 	User string                `json:"supplier"`
+
+
 }
 
 
@@ -59,12 +76,13 @@ type AllOrders struct{
 type AllSupplierOrders struct {
         SupplierOrdersList []SupplierOrder  `supplierOrdersList`
 }
-	
+
 
 type Asset struct{
-	User string        `json:"user"`
-	ContainerIDs []string `json:"containerIDs"`
-	LitresofMilk int `json:"litresofmilk"`
+	Owner string        `json:"owner"`
+	//BatchIDs []string `json:"BatchIDs"`
+	BatchIDs []string `json:"batchIDs"`
+	NumberofProducts int `json:"numberofproducts"`
 	Supplycoins int `json:"supplycoins"`
 }
 
@@ -72,22 +90,23 @@ type Asset struct{
 
 func main() {
 	err := shim.Start(new(SimpleChaincode))
-	
+
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
 	fmt.Printf("every time we enter main function")
 }
 
-// Init resets all the things
+// Init Newbatchets all the things
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-	
-	
+
+
 	var err error
-	
-	fmt.Println("Welcome tothe Supply chain management Phase 1, Deployment has been started, do as u want")
-	fmt.Printf("Hope this entire flow will go nicely")
- 
+
+	fmt.Println("Welcome  to  Supply chain management , Deployment has been started...")
+	fmt.Printf("Hope for best, Plan for the worst")
+
+
        if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 1")
        }
@@ -96,58 +115,62 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
        if err != nil {
 		return nil, err
        }
-	
-/* Resetting the container list - Making sure the value corresponding to openOrdersStr is empty */
-	
+
+/* Newbatchetting the container list - Making sure the value corNewbatchponding to openOrdersStr is empty */
+
        var empty []string
        jsonAsBytes, _ := json.Marshal(empty)                                   //create an empty array of string
-       err = stub.PutState(containerIndexStr, jsonAsBytes)                     //Resetting - Making milk container list as empty 
+       err = stub.PutState(batchIndexStr, jsonAsBytes)                     //Newbatchetting - Making milk container list as empty
        if err != nil {
 		return nil, err
-        }  
-	
-	
-/* Resetting the customer and market order list  */
-       var orders AllOrders                                            // new instance of Orderlist 
+        }
+
+
+/*making no of batches to zero*/
+	Count = 0
+
+/* Updating the customer and market order list  */
+  var orders AllOrders                                            // new instance of Orderlist
 	jsonAsBytes, _ = json.Marshal(orders)				//  it will be null initially
 	err = stub.PutState(openOrdersStr, jsonAsBytes)                 //So the value for key is null
-	if err != nil {       
+	if err != nil {
 		return nil, err
 }
 	err = stub.PutState(customerOrdersStr, jsonAsBytes)                 //So the value for key is null
-	if err != nil {       
+	if err != nil {
 		return nil, err
 }
-	
-/* Resetting the supplier order list  */
+
+/* Newbatchetting the supplier order list  */
 	var suporders AllSupplierOrders
 	suporderAsBytes,_ := json.Marshal(suporders)
 	err = stub.PutState(supplierOrdersStr, suporderAsBytes)                 //So the value for key is null
-	if err != nil {       
+	if err != nil {
 		return nil, err
 }
-// Resetting the Assets of Supplier,Market, Logistics, Customer
-	
+// Newbatchetting the Assets of Supplier,Market, Logistics, Customer
+
 	var emptyasset Asset
-	
-	emptyasset.User = "Supplier"
+
+	emptyasset.Owner = "Supplier"
 	jsonAsBytes, _ = json.Marshal(emptyasset)                // this is the byte format format of empty Asset structure
 	err = stub.PutState("SupplierAssets",jsonAsBytes)        // key -Supplier assets and value is empty now --> Supplier has no assets
-	emptyasset.User = "Market"
-	jsonAsBytes, _ = json.Marshal(emptyasset) 
-	err = stub.PutState("MarketAssets", jsonAsBytes)         // key -Market assets and value is empty now --> Market has no assets
-	emptyasset.User = "Logistics"
-	jsonAsBytes, _ = json.Marshal(emptyasset) 
+	emptyasset.Owner = "Retailer"
+	jsonAsBytes, _ = json.Marshal(emptyasset)
+	err = stub.PutState("RetailerAssets", jsonAsBytes)         // key -Market assets and value is empty now --> Market has no assets
+	emptyasset.Owner = "Logistics"
+	jsonAsBytes, _ = json.Marshal(emptyasset)
 	err = stub.PutState("LogisticsAssets", jsonAsBytes)      // key - Logistics assets and value is empty now --> Logistic has no assets
-	emptyasset.User = "Customer"
-	jsonAsBytes, _ = json.Marshal(emptyasset) 
+	emptyasset.Owner = "Customer"
+	jsonAsBytes, _ = json.Marshal(emptyasset)
 	err = stub.PutState("CustomerAssets", jsonAsBytes)      // key - Customer assets and value is empty now --> Customer has no assets
-	
-	if err != nil {       
+
+	if err != nil {
 		return nil, err
 }
-	fmt.Println("Successfully deployed the code and orders and assets are reset")
-	
+	fmt.Println("Successfully deployed the code and orders and assets are Newbatchet")
+	fmt.Printf("Go a head and play around")
+
 return nil, nil
 }
 
@@ -159,30 +182,28 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 	if function == "init" {
 		return t.Init(stub, "init", args)
 	}else if function == "Create_coins" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Create_coins(stub, args)	
-        }else if function == "BuyMilkfrom_Retailer" { //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.BuyMilkfrom_Retailer(stub, args)	
-        }else if function == "Checkstockby_Market" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Checkstockby_Market(stub, args)	
-        }else if function == "Dummyfunction"{
-		return t.Dummyfunction(stub,args)
-	}else if function == "Ordermilkto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Ordermilkto_Supplier(stub, args)	
-        }else if function == "Dummyfunctiontwo"{
-		return t.Dummyfunctiontwo(stub,args)
-	}else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Checkstockby_Supplier(stub,args)	
-        }else if function == "Dummyfunctionthree"{
-		return t.Dummyfunctionthree(stub,args)
-	}else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
-		return t.Call_Logistics(stub, args)	
-        }else if function == "Pickupthe_Product" {
-                return t.Pickupthe_Product(stub,args)
-        }else if function == "Deliverto_Market" {
-                return t.Deliverto_Market(stub,args)
-        }else if function == "Dummyfunctionfour"{
-		return t.Dummyfunctionfour(stub,args)
-	}
+		return t.Create_coins(stub, args)
+        }else if function == "Buyproductfrom_Retailer" { //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Buyproductfrom_Retailer(stub, args)
+        }else if function == "Vieworderby_Retailer" {  //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Vieworderby_Retailer(stub, args)
+        }else if function == "Checkstockby_Retailer" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Checkstockby_Retailer(stub, args)
+        }else if function == "Orderto_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Orderto_Supplier(stub, args)
+        }else if function == "Vieworderby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Vieworderby_Supplier(stub, args)
+        }else if function == "Checkstockby_Supplier" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Checkstockby_Supplier(stub,args)
+        }else if function == "Call_Logistics" {		         //creates a coin - invoked by market /logistics - params - coin id, entity name
+		return t.Call_Logistics(stub, args)
+        }else if function == "Vieworderby_Logistics"{
+                return t.Vieworderby_Logistics(stub,args)
+        }else if function == "pickuptheproduct" {
+                return t.pickuptheproduct(stub,args)
+        }else if function == "Deliverto_Retailer" {
+                return t.Deliverto_Retailer(stub,args)
+        }
 	fmt.Println("invoke did not find func: " + function)
 
 return nil, errors.New("Received unknown function invocation: " + function)
@@ -190,16 +211,118 @@ return nil, errors.New("Received unknown function invocation: " + function)
 
 
 
+func  Create_Batch(stub shim.ChaincodeStubInterface, args string ) ( error) {
+
+//args
+//No of batches in string format
+
+//var err error
+Quantityofbatches,_ := strconv.Atoi(args)             // No of batches to be created
+Productsperbatch := 10
+owner := "Supplier"
+status := "Manufactured"
+
+
+for j:=0;j<Quantityofbatches;j++{
+//Each time this outer loop runs a new batch of products is created
+        Count += 1
+	batchid := "Batch"+strconv.Itoa(Count)           //This has to be linked to QR Code generated later on
+	fmt.Println(batchid)
+
+	batchAsBytes, err := stub.GetState(batchid)
+        if err != nil {
+		return  errors.New("Failed to get details of given id")
+        }
+
+
+	Newbatch := Batch{}
+	json.Unmarshal(batchAsBytes, &Newbatch)
+
+if  Newbatch.BatchID == batchid{
+
+        fmt.Println("batch already exixts")
+        fmt.Println("%+v\n",Newbatch)
+        return errors.New("This batch already exists")
+}
+
+//If not der, creating
+	Newbatch.BatchID = batchid
+        Newbatch.Owner = owner
+        Newbatch.Status = status
+        Newbatch.Quantity = Productsperbatch
+
+	for i:=0; i < Newbatch.Quantity ;i++{
+	 	 Newproduct := Product{}
+	   Newproduct.ProductID = "prod"+strconv.Itoa(Count)+"."+strconv.Itoa(i)
+     Newproduct.Owner = owner
+     Newproduct.Status = status
+     productasbytes ,_ := json.Marshal( Newproduct)
+		 stub.PutState( Newproduct.ProductID,productasbytes)
+
+     Newbatch.Productlist = append(Newbatch.Productlist, Newproduct.ProductID)
+	}
+
+fmt.Printf("%+v\n", Newbatch)
+	batchAsBytes,_ = json.Marshal(Newbatch)
+	stub.PutState(Newbatch.BatchID,batchAsBytes)
+
+	//Update batchIndexStr
+        batchindexAsBytes, err := stub.GetState(batchIndexStr)
+	if err != nil {
+		return  errors.New("Failed to get container index")
+	}
+	var batchIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
+	json.Unmarshal(batchindexAsBytes, &batchIndex)
+
+
+	batchIndex = append(batchIndex, Newbatch.BatchID)          //append the newly created container to the global container list									//add marble name to index list
+	fmt.Println("batch indices in the network: ", batchIndex)
+	batchindexAsBytes, _ = json.Marshal(batchIndex)
+        err = stub.PutState(batchIndexStr, batchindexAsBytes)
+
+
+// append the Batch ID to the existing assets of the Supplier
+
+	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function
+	supplierasset := Asset{}
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+
+	supplierasset.BatchIDs = append(supplierasset.BatchIDs, Newbatch.BatchID)
+	supplierasset.NumberofProducts += Newbatch.Quantity
+	supplierassetAsBytes,_=  json.Marshal(supplierasset)
+	stub.PutState("SupplierAssets",supplierassetAsBytes)
+	fmt.Println("Balance of Supplier")
+        fmt.Printf("%+v\n", supplierasset)
+    //double checking
+	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function
+
+	json.Unmarshal( supplierassetAsBytes, &supplierasset)
+	fmt.Printf("%+v\n", supplierasset)
+
+
+
+
+}
+
+
+
+
+
+
+return nil
+
+}
+
 
 func (t *SimpleChaincode) Create_coins(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 
-//"Market/Logistics/Customer",                  "100"
+//"Retailer/Logistics/Customer",                  "100"
 //args[0]                                     args[1]
-//targeted owner                         No of supplycoins     
+//targeted owner                         No of supplycoins
 var err error
-	user:= args[0]
-	userAssets := user +"Assets"
-        assetAsBytes,_ := stub.GetState(userAssets)        // The same key which we used in Init function 
+	owner:= args[0]
+	OwnerAssets := owner +"Assets"
+        assetAsBytes,_ := stub.GetState(OwnerAssets)        // The same key which we used in Init function
 	asset := Asset{}
 	json.Unmarshal( assetAsBytes, &asset)
 
@@ -208,8 +331,8 @@ var err error
 		return nil, errors.New(" No of coins must be a numeric string")
 	}
 	assetAsBytes,_=  json.Marshal(asset)
-	stub.PutState(userAssets,assetAsBytes)
-	fmt.Println("Balance of " , user)
+	stub.PutState(OwnerAssets,assetAsBytes)
+	fmt.Println("Balance of " , owner)
         fmt.Printf("%+v\n", asset)
 
 
@@ -218,33 +341,44 @@ return nil,nil
 
 
 
-func (t *SimpleChaincode) BuyMilkfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func randSeq(n int) string {
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = letters[rand.Intn(len(letters))]
+    }
+    return string(b)
+}
+
+
+func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //args[0]      args[1]
 //"cus123"       "10"
 	var err error
 	fmt.Println("Hello customer, welcome ")
 
-	
+
 	Openorder := Order{}
         Openorder.User = "customer"
-        Openorder.Status = "Order received by Market"
-        Openorder.OrderID = args[0]
-        Openorder.Litres, err = strconv.Atoi(args[1])
+        Openorder.Status = "Order received by Retailer"
+        //Openorder.OrderID = args[0]
+	Openorder.OrderID = randSeq(10)
+      //  Openorder.Quantity, err = strconv.Atoi(args[1])  ///No of units of product the customer wants
+	Openorder.Quantity, err = strconv.Atoi(args[0])
 	if err != nil {
-		return nil, errors.New(" No of coins must be a numeric string")
+		return nil, errors.New(" No of products must be a numeric string")
 	}
 	fmt.Println("Hello customer, your order has been generated successfully, you can track it with id in the following details")
 	fmt.Println("%+v\n",Openorder)
         orderAsBytes,_ := json.Marshal(Openorder)
 	stub.PutState(Openorder.OrderID,orderAsBytes)
-	
+
 	customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
 	var orders AllOrders
-	json.Unmarshal(customerordersAsBytes, &orders)				
-	
+	json.Unmarshal(customerordersAsBytes, &orders)
+
 	orders.OpenOrders = append(orders.OpenOrders , Openorder);		//append the new order - Openorder
 	fmt.Println(" appended",  Openorder.OrderID,"to existing customer orders")
 	jsonAsBytes, _ := json.Marshal(orders)
@@ -256,10 +390,23 @@ func (t *SimpleChaincode) BuyMilkfrom_Retailer(stub shim.ChaincodeStubInterface,
 	return nil,nil
 }
 
+func(t *SimpleChaincode)  Vieworderby_Retailer(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
+// This will be invoked by MARKET
+	fmt.Printf("Hello Retailer, these are the orders placed to  you by customer")
+
+
+	ordersAsBytes, _ := stub.GetState(customerOrdersStr)
+	var orders AllOrders
+	json.Unmarshal(ordersAsBytes, &orders)
+	//This should stop here.. In UI it should display all the orders - beside each order -one button "ship to customer"
+	//If we click on any order, it should call query for that OrderID. So it will be enough if we update OrderID and push it to ledger
+	fmt.Println(orders)
+	 return nil,nil
+}
 
 
 
-func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface, args[]string) ([]byte, error){
+func (t *SimpleChaincode)  Checkstockby_Retailer(stub shim.ChaincodeStubInterface, args[]string) ([]byte, error){
 	// In UI, beside each order one button to ship to customer, one button to check stock
 	// we will extract details of orderId
 	//we will exract asset balance of Market
@@ -272,39 +419,39 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
-	ShipOrder := Order{} 
+	ShipOrder := Order{}
 	json.Unmarshal(orderAsBytes, &ShipOrder)
-	quantity := ShipOrder.Litres
-//fetching assets of market	
-	marketassetAsBytes, _ := stub.GetState("MarketAssets")
-	Marketasset := Asset{}             
-	json.Unmarshal(marketassetAsBytes, &Marketasset )
-	
-//checking if market has the stock	
-	if (Marketasset.LitresofMilk >= quantity ){
-		fmt.Println("Enough stock is available, Go ahead and deliver for customer")
-		
+	quantity := ShipOrder.Quantity        //Here quantity implies no of unit products ..not batches
+//fetching assets of retailer
+	retailerassetAsBytes, _ := stub.GetState("RetailerAssets")
+	Retailerasset := Asset{}
+	json.Unmarshal(retailerassetAsBytes, &Retailerasset )
+
+//checking if market has the stock
+	if (Retailerasset.NumberofProducts >= quantity && ShipOrder.Status != "Delivered to customer"  ){
+		fmt.Println("Enough Number of Products are available, Go ahead and deliver to customer")
+
 //Call Deliver to customer function here
 		b,_:= Deliverto_Customer(stub,ShipOrder.OrderID)
 		fmt.Println(string(b))
-		
-		return nil, nil
-		
+		str := "Delivered to customer"
+		return []byte(str), nil
+
 	}else{
 	        fmt.Println("Right now there isn't sufficient quantity , Give order to Supplier/Manufacturer")
-		
+		      str :=  "Right now there isn't sufficient quantity , Give order to Supplier/Manufacturer"
 	        ShipOrder.Status = "In transit" // No matter, where the order placed by market is , for customer we will show it is "in transit"
 	        orderAsBytes,err = json.Marshal(ShipOrder)
-                stub.PutState(OrderID,orderAsBytes)  
-		
+          stub.PutState(OrderID,orderAsBytes)
+
 		customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
 	var orders AllOrders
-	json.Unmarshal(customerordersAsBytes, &orders)	
-	
-	
+	json.Unmarshal(customerordersAsBytes, &orders)
+
+
 		for i :=0; i<len(orders.OpenOrders);i++{
 			if (orders.OpenOrders[i].OrderID == ShipOrder.OrderID){
 			orders.OpenOrders[i].Status = "In transit "
@@ -312,13 +459,15 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
                         stub.PutState(customerOrdersStr,  customerordersAsBytes)
 			}
 	       }
-	  return nil, nil
-		
-		//Now we should send details of updated order status to customer, should be done in UI
+	  return []byte(str), nil
 
-		
+		//Now we should send details of updated order status to customer, should be done in UI
+  // A pop up should come to give order to Supplier
+
         }
-	
+
+
+//Should keep a flag kind of thing to see which one happend and catch that flag in UI and display accordingly
 	return nil,nil
 
 }
@@ -326,9 +475,9 @@ func (t *SimpleChaincode)  Checkstockby_Market(stub shim.ChaincodeStubInterface,
 
 func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,error){
 
-	//args[0] 
-	//OrderID  
-	
+	//args[0]
+	//OrderID
+
 	fmt.Println("Inside deliver to customer function")
 //customer order
 	OrderID := args
@@ -336,80 +485,88 @@ func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,e
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
 	}
-	ShipOrder := Order{} 
+	ShipOrder := Order{}
 	json.Unmarshal(orderAsBytes, &ShipOrder)
 	fmt.Println("%+v\n", ShipOrder)
-	quantity := ShipOrder.Litres
-	fmt.Println(quantity)
-//market and customer assets
-        marketassetAsBytes, _ := stub.GetState("MarketAssets")
-	Marketasset := Asset{}             
-	json.Unmarshal(marketassetAsBytes, &Marketasset)
-	fmt.Printf("%+v\n", Marketasset) 
+	quantity := ShipOrder.Quantity
+	//market and customer assets
+  retailerassetAsBytes, _ := stub.GetState("RetailerAssets")
+	Retailerasset := Asset{}
+	json.Unmarshal(retailerassetAsBytes, &Retailerasset)
+	fmt.Printf("%+v\n", Retailerasset)
 	customerassetAsBytes, _ := stub.GetState("CustomerAssets")
-	Customerasset := Asset{}             
+	Customerasset := Asset{}
 	json.Unmarshal(customerassetAsBytes, &Customerasset)
-	fmt.Printf("%+v\n", Customerasset) 
-if (Marketasset.LitresofMilk >= quantity ){
+	fmt.Printf("%+v\n", Customerasset)
+if (Retailerasset.NumberofProducts >= quantity ){
 	fmt.Println("Inside deliver to customer, market has quantity")
-	
-	id := Marketasset.ContainerIDs[0]
-	
-	
-	milkAsBytes, err := stub.GetState(id) 
+
+	id := Retailerasset.BatchIDs[0]
+
+
+	batchAsBytes, err := stub.GetState(id)
         if err != nil {
-		return nil, errors.New("Failed to get details of given id") 
+		return nil, errors.New("Failed to get details of given id")
         }
 
-        res := MilkContainer{} 
-        json.Unmarshal(milkAsBytes, &res)
-		
-	fmt.Printf("%+v\n", res)
-	
-	
-	
-	
-	
+        Newbatch := Batch{}
+        json.Unmarshal(batchAsBytes, &Newbatch)
+
+	fmt.Printf("%+v\n", Newbatch)
+
+
+
+
+
    // here we are assuming only one container is der and it has enough stock to provide
-	if ( res.Userlist[0].Litres - quantity >0) {
+	if ( Newbatch.Quantity - quantity >0) {
 		fmt.Println("yo yo..its about to complete")
-                    
-   //updating the container details, bcz it is shared now
-		res.Userlist[0].Litres -= quantity // bringing down the market share of it
-		res.Userlist[1].User = "Customer"
-		res.Userlist[1].Litres = quantity
-		fmt.Printf("%+v\n", res)
-		milkAsBytes, _ =json.Marshal(res)
-                stub.PutState(res.ContainerID,milkAsBytes)
-		
-  //updating customer assets
-		
-	              Customerasset.LitresofMilk += quantity
-		if ( len(Customerasset.ContainerIDs) == 0){
-		      fmt.Println("This is the first container of customer")
-	   Customerasset.ContainerIDs = append(Customerasset.ContainerIDs ,id)
-		}
-		fmt.Printf("%+v\n", Customerasset)
-			    Marketasset.LitresofMilk -= quantity
-	
-	              customerassetAsBytes,_ = json.Marshal(Customerasset)
-	              stub.PutState("CustomerAssets",customerassetAsBytes)
-	
-	               marketassetAsBytes,_ = json.Marshal(Marketasset)
-	               stub.PutState("MarketAssets",marketassetAsBytes)
-	
-	               ShipOrder.Status ="Delivered to Customer"
-	               fmt.Printf("%+v\n", ShipOrder)
-	               orderAsBytes,err = json.Marshal(ShipOrder)
-                       stub.PutState(OrderID,orderAsBytes)
-	
-        customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+
+        //updating the container details, bcz it is shared now
+		Newbatch.Quantity -= quantity // bringing down the Retailer share of it
+    Retailerasset.NumberofProducts -= quantity
+    Customerasset.NumberofProducts += quantity
+
+	 Customerasset.BatchIDs = append(Customerasset.BatchIDs,Newbatch.Productlist[0:quantity]...)  //adding prod id to customer i.e now the product is with customer
+	 Newbatch.Productlist = Newbatch.Productlist[quantity:]     //Remving the products from the box
+        for  k:=0;k<len(Customerasset.BatchIDs);k++{
+
+
+					Newproduct := Product{}
+productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[k])
+		json.Unmarshal(productasbytes,&Newproduct)
+					Newproduct.Status = "Delivered to customer"
+					Newproduct.Owner = "Customer"
+					productasbytes ,_ = json.Marshal( Newproduct)
+					stub.PutState( Newproduct.ProductID,productasbytes)
+
+
+
+				}
+
+
+//updating assets
+  customerassetAsBytes,_ = json.Marshal(Customerasset)
+	stub.PutState("CustomerAssets",customerassetAsBytes)
+
+	 retailerassetAsBytes,_ = json.Marshal(Retailerasset)
+	 stub.PutState("RetailerAssets",retailerassetAsBytes)
+
+	 batchAsBytes,_ = json.Marshal(Newbatch)
+	 stub.PutState(Newbatch.BatchID,batchAsBytes)
+//updating orders
+  ShipOrder.Status ="Delivered to Customer"
+	fmt.Printf("%+v\n", ShipOrder)
+  orderAsBytes,err = json.Marshal(ShipOrder)
+  stub.PutState(OrderID,orderAsBytes)
+
+  customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
 	var orders AllOrders
-	json.Unmarshal(customerordersAsBytes, &orders)				
-	
+	json.Unmarshal(customerordersAsBytes, &orders)
+
 		for i :=0; i<len(orders.OpenOrders);i++{
 			if (orders.OpenOrders[i].OrderID == ShipOrder.OrderID){
 			orders.OpenOrders[i].Status = "Delivered to customer"
@@ -417,11 +574,11 @@ if (Marketasset.LitresofMilk >= quantity ){
                         stub.PutState(customerOrdersStr,  customerordersAsBytes)
 			}
 	       }
-	  
-		//b := [3]string{"30", "Customer", "Market"}
-	           //transfer(stub,b)        //Transfer should be automated. So it can't be invoked from UI..Loop hole
+
+		b := [3]string{"30", "Customer", "Retailer"}
+	           transfer(stub,b)        //Transfer should be automated. So it can't be invoked from UI..Loop hole
 	               fmt.Println("FINALLLLLYYYY, END OF THE STORY")
-         
+
                       return nil,nil
 	}else{
 	       return nil, errors.New("On a whole market has quantity, but it is divided into container, right now we are not going to that level")
@@ -433,42 +590,42 @@ if (Marketasset.LitresofMilk >= quantity ){
 }
 
 
-func(t *SimpleChaincode) Ordermilkto_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-// "cus123"           "abcd"   
-// CustomerOrderID    MarketOrderID 
+func(t *SimpleChaincode) Orderto_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+// "cus123"           "abcd"
+// CustomerOrderID    MarketOrderID
 
 var err error
 
-//fetching the customer order details and ordering 5 times to the litres customer asked
+//fetching the customer order details and ordering 5 times to the Quantity customer asked
 CustomerOrderID := args[0]
 orderAsBytes, err := stub.GetState(CustomerOrderID)
 	if err != nil {
 		return  nil, errors.New("Failed to get details of customer order, please make sure your id is correct")
 	}
-CustomerOrder := Order{} 
+CustomerOrder := Order{}
 json.Unmarshal(orderAsBytes, &CustomerOrder)
-quantity := CustomerOrder.Litres
-	
+quantity := CustomerOrder.Quantity
+
 //Generating market order
 
 Openorder := Order{}
-Openorder.User = "Market"
+Openorder.User = "Retailer"
 Openorder.Status = "Order placed to Supplier "
 Openorder.OrderID = args[1]
-Openorder.Litres = 5 * quantity
+Openorder.Quantity = ((quantity - (quantity % 10)) /10) + 1 //Rounding to the nearest number of boxes that can suffice for the quantity asked by customer
 
 orderAsBytes,_ = json.Marshal(Openorder)
 stub.PutState(Openorder.OrderID,orderAsBytes)
 fmt.Println("your Order has been generated successfully")
 fmt.Printf("%+v\n", Openorder)
-	
+
 //Add the new market order to market orders list
 	ordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
-		return nil, errors.New("Failed to get  existing list of Market orders")
+		return nil, errors.New("Failed to get  existing list of Retailer orders")
 	}
 	var orders AllOrders
-	json.Unmarshal(ordersAsBytes, &orders)				
+	json.Unmarshal(ordersAsBytes, &orders)
 	orders.OpenOrders = append(orders.OpenOrders , Openorder);		//append the new order - Openorder
 	fmt.Println(" appended ",Openorder.OrderID,"to existing market orders")
 	jsonAsBytes, _ := json.Marshal(orders)
@@ -476,176 +633,112 @@ fmt.Printf("%+v\n", Openorder)
 	if err != nil {
 		return nil, err
         }
-	
-	
+
+
 return nil,nil
 }
 
 
 
+func(t *SimpleChaincode)  Vieworderby_Supplier(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
+// This will be invoked by MARKET- think of UI-View orders- does he pass any parameter there...
+// so here also no need of any arguments.
+
+	fmt.Printf("Hello Supplier, these are the orders placed to  you by Retailer")
+
+
+	ordersAsBytes, _ := stub.GetState(openOrdersStr)
+	var orders AllOrders
+	json.Unmarshal(ordersAsBytes, &orders)
+	//This should stop here.. In UI it should display all the orders - beside each order -one button "ship to customer"
+	//If we click on any order, it should call query for that OrderID. So it will be enough if we update OrderID and push it to ledger
+	fmt.Println(orders)
+	 return nil,nil
+}
+
+
+
+
 func(t *SimpleChaincode)  Checkstockby_Supplier(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-//FUNCTIONALITY EXPLAINED
+/***FUNCTIONALITY EXPLAINED*******/
 // In UI, beside each order one button to call logistics, one button to check stock
-// we will extract details of market orderId
-//we will exract asset balance of Supplier
+// we will extract details of orderId
+//we will exract asset balance of Market
 // if enough balance is der --> find a container and show it, if not create a new container (automated) and show it
 //At the end of this function we will end up with a container
+/*******/
 
-//Market OrderID should be passed in UI
+
+//OrderID should be passed in UI
 //fetching order details
 //Market OrderID
 //args[0]
+
 	OrderID := args[0]
 	orderAsBytes, err := stub.GetState(OrderID)
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
-	ShipOrder := Order{} 
+	ShipOrder := Order{}
 	json.Unmarshal(orderAsBytes, &ShipOrder)
-	quantity := ShipOrder.Litres
-//fetching assets of market	
+	quantity := ShipOrder.Quantity               //Here quantity is no of boxes
+//fetching assets of supplier
 	supplierassetAsBytes, _ := stub.GetState("SupplierAssets")
-	supplierasset := Asset{}             
+	supplierasset := Asset{}
 	json.Unmarshal(supplierassetAsBytes, &supplierasset )
 	fmt.Printf("%+v\n", supplierasset)
-//checking if Supplier has the stock	
-if (supplierasset.LitresofMilk >= quantity ){
-	fmt.Println("Enough stock is available, finding a suitable container.....")
-	cid := supplierasset.ContainerIDs[0]
-	containerassetAsBytes, _ := stub.GetState(cid)
-	res := MilkContainer{} 
-	json.Unmarshal(containerassetAsBytes,&res)
-        fmt.Println("Found a suitable container, below is the ID of the container, use it while placing order to Logistics")
-	fmt.Printf("%+v\n", res)
-	
-}else{
-	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
-		var b [3]string
-		b[0] = "1x223"
-		b[1] = "Supplier"
-		b[2] = strconv.Itoa(ShipOrder.Litres)
-                Create_milkcontainer(stub,b)
+//checking if Supplier has the stock
+if (len(supplierasset.BatchIDs) >= quantity  ){
+		fmt.Println("Enough number of batches are available, below are the details")
+		fmt.Printf("%+v\n", supplierasset)
+	  cid := supplierasset.BatchIDs[0]
+	  batchassetAsBytes, _ := stub.GetState(cid)
+	  Newbatch := Batch{}
+	  json.Unmarshal(batchassetAsBytes,&Newbatch)
 
-		
-	       fmt.Println("Successfully created container, check stock again to know your container details ") 
+	  fmt.Printf("%+v\n", Newbatch)
+
+  }else{
+	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
+		b := strconv.Itoa(quantity)
+	 Create_Batch(stub,b)
+
+
+	       // fmt.Println("Successfully created container, check stock again to know your container details ")
 	        // can't call function again..loop hole
 		//return nil,nil
 }
 	return nil,nil
 }
 
-
-
-func  Create_milkcontainer(stub shim.ChaincodeStubInterface, args [3]string) ( error) {
-var err error
-
-// "1x223" "supplier" "20" 
-// args[0] args[1] args[2] 
-	
-	if len(args) != 3{
-		return  errors.New("Please enter all the details")
-        }
-	fmt.Println("Hold on, we are Creating milkcontainer asset for you")
-	
-id := args[0]
-user := args[1]
-litres,err:=strconv.Atoi(args[2])
-	if err != nil {
-		return  errors.New("Litres argument must be a numeric string")
-	}
-	
-// Checking if the container already exists in the network
-milkAsBytes, err := stub.GetState(id) 
-if err != nil {
-		return  errors.New("Failed to get details of given id") 
-}
-
-res := MilkContainer{} 
-json.Unmarshal(milkAsBytes, &res)
-
-if res.ContainerID == id{
-
-        fmt.Println("Container already exixts")
-        fmt.Println("%+v\n",res)
-        return errors.New("This container already exists")
-}
-
-//If not present, create it and Update ledger, containerIndexStr, Assets of Supplier
-//Creation
-        res.ContainerID = id
-	res.Userlist[0].User=user
-	res.Userlist[0].Litres = litres
-	milkAsBytes, _ =json.Marshal(res)
-        stub.PutState(res.ContainerID,milkAsBytes)
-	fmt.Printf("Container created successfully, details are %+v\n", res)
-
-//Update containerIndexStr	
-	containerAsBytes, err := stub.GetState(containerIndexStr)
-	if err != nil {
-		return  errors.New("Failed to get container index")
-	}
-	var containerIndex []string                                        //an array to store container indices - later this wil be the value for containerIndexStr
-	json.Unmarshal(containerAsBytes, &containerIndex)	
-	
-	
-	containerIndex = append(containerIndex, res.ContainerID)          //append the newly created container to the global container list									//add marble name to index list
-	fmt.Println("container indices in the network: ", containerIndex)
-	jsonAsBytes, _ := json.Marshal(containerIndex)
-        err = stub.PutState(containerIndexStr, jsonAsBytes)
-	
-// append the container ID to the existing assets of the Supplier
-	
-	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function 
-	supplierasset := Asset{}
-	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-	
-	supplierasset.ContainerIDs = append(supplierasset.ContainerIDs, res.ContainerID)
-	supplierasset.LitresofMilk += res.Userlist[0].Litres
-	supplierassetAsBytes,_=  json.Marshal(supplierasset)
-	stub.PutState("SupplierAssets",supplierassetAsBytes)
-	fmt.Println("Balance of Supplier")
-        fmt.Printf("%+v\n", supplierasset)
-    //double checking
-	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function 
-	
-	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-	fmt.Printf("%+v\n", supplierasset)
-	
-	
-	
-	return nil
-
-}
-
-
-
 func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args []string) ([]byte, error){
-	
+
 //args[0]   //ToWhom  //Container ID
-//OrderID   //Market   //"1x223"
-	
-// I think its fair only, in practical case, we will tell adrress for a postman to deliver, same thing here also
+//OrderID   //Retailer   //"1x223"
+
+// I think its fair only, in practical case, we will tell adrNewbatchs for a postman to deliver, same thing here also
 //Here Postman is Logistics guy, Receiver is market, letter is Container
-	
+
 	ShipOrder := SupplierOrder{}
 	ShipOrder.OrderID = args[0]
 	ShipOrder.Towhom = args[1]
-	ShipOrder.ContainerID = args[2]
-	
+	ShipOrder.BatchID = args[2]
+	ShipOrder.User = "Supplier"
+
 	orderAsBytes, _ :=json.Marshal(ShipOrder)
 	stub.PutState( ShipOrder.OrderID, orderAsBytes)
-	
+
 	fmt.Println("Successfully placed order to Logistics")
 	fmt.Println("%+v\n", ShipOrder)
-	
-	
+
+
 	//Add the new Supplier order to market orders list
 	ordersAsBytes, err := stub.GetState(supplierOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
 	if err != nil {
 		return nil, errors.New("Failed to get  existing list of  orders placed by Supplier to logistics")
 	}
 	var suporders AllSupplierOrders
-	json.Unmarshal(ordersAsBytes, &suporders)				
+	json.Unmarshal(ordersAsBytes, &suporders)
 	suporders.SupplierOrdersList  = append(suporders.SupplierOrdersList, ShipOrder);		//append the new order - Openorder
 	fmt.Println(" appended ",ShipOrder.OrderID,"to existing orders placed by Supplier to logistics")
 	jsonAsBytes, _ := json.Marshal(suporders)
@@ -653,198 +746,261 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 	if err != nil {
 		return nil, err
         }
-	
-	
+
+
+	return nil,nil
+
+}
+
+
+
+func(t *SimpleChaincode) Vieworderby_Logistics(stub shim.ChaincodeStubInterface, args []string) ( []byte , error) {
+
+	// This will be invoked by Supplier in UI-View orders- does he pass any parameter there...
+	// so here also no need to pass any arguments. args will be empty-but just for syntax-pass something as parameter in angular js
+
+
+//fetching the Orders
+	fmt.Printf("Hello Logistics, here are the orders placed to you by Supplier")
+	fmt.Printf("Go a head and do your business")
+
+
+	ordersAsBytes, _ := stub.GetState(supplierOrdersStr)
+
+	var orders AllSupplierOrders
+	json.Unmarshal(ordersAsBytes, &orders)
+
+	fmt.Println(orders)
 	return nil,nil
 }
 
 
-func (t *SimpleChaincode) Dummyfunction(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
-	a := args[0]
-	fmt.Printf(a)
+func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args []string) ( []byte , error) {
 
-return nil,nil
-}
+// So in view order, he will see his orders, clicking on the order will show to whom and which container
+//There will be a button "pickuptheproduct" which is equivalent to real life pick up --status will be in transit
+//There will be one more button there only "Delivertheproduct"
+//As of march 3, lets pass market order Id only as argument
+//How can we update the order placed by market...without a notification
+//here we are passing market order id only
+	//args[0] args[1]
+	// MarketOrderID, BatchID
+	RetailerOrderID := args[0]
+	SupplierOrderID := args[1]
 
-
-func(t *SimpleChaincode) Pickupthe_Product(stub shim.ChaincodeStubInterface, args []string) ( []byte , error) {
-
-	// MarketOrderID
-	MarketOrderID := args[0]
-	
-	
-	// fetch the order details and update status as "in transit"
-	orderAsBytes, err := stub.GetState(MarketOrderID)
+// fetch the order details and update status as "in transit"
+	orderAsBytes, err := stub.GetState(RetailerOrderID)
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
 	}
-	MarketOrder := Order{} 
-	json.Unmarshal(orderAsBytes, &MarketOrder)
+	RetailerOrder := Order{}
+	json.Unmarshal(orderAsBytes, &RetailerOrder)
+
+	RetailerOrder.Status = "In transit to Retailer"
+
+	orderAsBytes,err = json.Marshal(RetailerOrder)
+
+	stub.PutState(RetailerOrderID,orderAsBytes)
+
+	fmt.Printf("%+v\n", RetailerOrder)
 	
-	MarketOrder.Status = "In transit to market"
-	 
-	orderAsBytes,err = json.Marshal(MarketOrder)
+	supplierorderAsBytes, err := stub.GetState(SupplierOrderID)
+	if err != nil {
+		return  nil,errors.New("Failed to get openorders")
+	}
+	Supplierorder := SupplierOrder{}
+	json.Unmarshal(supplierorderAsBytes, &Supplierorder)
+//updating status of batch	
+	batchAsBytes,err := stub.GetState(Supplierorder.BatchID)
+	Newbatch := Batch{}
 	
-	stub.PutState(MarketOrderID,orderAsBytes)
+	json.Unmarshal(batchAsBytes, &Newbatch)
 	
-	fmt.Printf("%+v\n", MarketOrder)
+	Newbatch.Status = RetailerOrder.Status
+//updating status of individual products	
+	for i:=0;i<len(Newbatch.Productlist);i++{
 	
-	fmt.Println("Container is in transit")
 	
+			  Newproduct := Product{}
+                          productasbytes ,_ := stub.GetState(Newbatch.Productlist[i])
+		          json.Unmarshal(productasbytes,&Newproduct)
+			  Newproduct.Status = RetailerOrder.Status
+			  productasbytes ,_ = json.Marshal( Newproduct)
+			  stub.PutState( Newproduct.ProductID,productasbytes)
+        }
+         
+	batchAsBytes,_ = json.Marshal(Newbatch)
+	stub.PutState(Newbatch.BatchID, batchAsBytes)	 
+
+	fmt.Println("Batch  is in transit")
+
 return nil,nil
 }
 
 
-func (t *SimpleChaincode) Dummyfunctiontwo(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
-	a := args[0]
-	fmt.Printf(a)
+func(t *SimpleChaincode)  Deliverto_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte , error) {
 
-return nil,nil
-}
-
-
-
-func(t *SimpleChaincode)  Deliverto_Market(stub shim.ChaincodeStubInterface, args []string) ([]byte , error) {
-	
 // SupplierOrderID      //MarketOrderID
 //args[0]               //args[1]
-	
-//So here we will set the user name in container ID to the one in Order ID and Status to Delivered - Asset Transfer
+
+//So here we will set the Owner name in container ID to the one in Order ID and Status to Delivered - Asset Transfer
 // Why should logistics guy check if the supplier actually holds the container?????????
-	fmt.Println("Delivering the container to Market")
+	fmt.Println("Delivering the batch to Retailer")
 	OrderID := args[0]
-	
+
 //fetch order details
        orderAsBytes, err := stub.GetState(OrderID)
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
 	}
-	ShipOrder := SupplierOrder{} 
+	ShipOrder := SupplierOrder{}
 	json.Unmarshal(orderAsBytes, &ShipOrder)
+
+	BatchID := ShipOrder.BatchID
+//fetch batch details
+	assetAsBytes,err := stub.GetState(BatchID)
+	Newbatch := Batch{}
+	json.Unmarshal(assetAsBytes, &Newbatch)
+
+if (Newbatch.Owner == "Supplier"){
+//Transfer batch ownership and Update status of Batch
+	Newbatch.Owner = "Retailer"         //ASSET TRANSFER  //This should be ShipOrder.Towhom in general case
+	Newbatch.Status = "At Retailer and healthy"
+//updating status of individual products	
+	for i:=0;i<len(Newbatch.Productlist);i++{
 	
-	ContainerID := ShipOrder.ContainerID
-//fetch container details	
-	assetAsBytes,err := stub.GetState(ContainerID)
-	container := MilkContainer{}
-	json.Unmarshal(assetAsBytes, &container)
-	if (container.Userlist[0].User == "Supplier"){
 	
-	container.Userlist[0].User = "Market"         //ASSET TRANSFER
-	fmt.Println("%+v\n", container)
-	fmt.Println("pushing the updated container back to ledger")
-	assetAsBytes,err = json.Marshal(container)
-	stub.PutState(ContainerID, assetAsBytes)    //Pushing the updated container  back to the ledger
-	
+			  Newproduct := Product{}
+                          productasbytes ,_ := stub.GetState(Newbatch.Productlist[i])
+		          json.Unmarshal(productasbytes,&Newproduct)
+			  Newproduct.Status = "At Retailer and healthy"
+			  productasbytes ,_ = json.Marshal( Newproduct)
+			  stub.PutState( Newproduct.ProductID,productasbytes)
+        }
+
+	fmt.Println("%+v\n", Newbatch)
+	fmt.Println("pushing the updated Batch back to ledger")
+	assetAsBytes,err = json.Marshal(Newbatch)
+	stub.PutState(BatchID, assetAsBytes)    //Pushing the updated container  back to the ledger
+
 //fetch supplier assets
-	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function
 	supplierasset := Asset{}
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
 //fetch market assets
-	userAssets := "MarketAssets"
-	assetAsBytes,_ := stub.GetState(userAssets)        // The same key which we used in Init function 
+	OwnerAssets := "RetailerAssets"
+	assetAsBytes,_ := stub.GetState(OwnerAssets)        // The same key which we used in Init function
 	asset := Asset{}
 	json.Unmarshal( assetAsBytes, &asset)
 //update market assets
-	fmt.Println("Updating ",userAssets)
-	asset.LitresofMilk += container.Userlist[0].Litres
-	fmt.Println("appending", ContainerID,"to Market container id list")
-        asset.ContainerIDs = append(asset.ContainerIDs,ContainerID)
+	fmt.Println("Updating ",OwnerAssets)
+	asset.NumberofProducts += Newbatch.Quantity
+	fmt.Println("appending", BatchID,"to Retailer batch id list")
+        asset.BatchIDs = append(asset.BatchIDs,BatchID)
        fmt.Printf("%+v\n", asset)
 //update supplierassets
-	
+
 	fmt.Println("Updating Supplier assets..")
-	supplierasset.LitresofMilk -= container.Userlist[0].Litres
-	
-	//WRITE A CODE  to remove that container id from supplier id list
-		
-		for i := 0 ;i < len(supplierasset.ContainerIDs);i++{
-	
-            if(supplierasset.ContainerIDs[i] == ContainerID){
-            supplierasset.ContainerIDs =  append(supplierasset.ContainerIDs[:i],supplierasset.ContainerIDs[i+1:]...)
+	supplierasset.NumberofProducts -= Newbatch.Quantity
+
+	//WRITE A CODE  to remove that batchid from supplier batchids list
+
+		for i := 0 ;i < len(supplierasset.BatchIDs);i++{
+
+            if(supplierasset.BatchIDs[i] == BatchID){
+
+            supplierasset.BatchIDs =  append(supplierasset.BatchIDs[:i],supplierasset.BatchIDs[i+1:]...)
            break
-       }	
+       }
 }
 	fmt.Printf("%+v\n", supplierasset)
-	
+
 //pushing updated ledger back to ledger
         supplierassetAsBytes,_=  json.Marshal(supplierasset)
 	stub.PutState("SupplierAssets",supplierassetAsBytes)
-		
+
 	assetAsBytes,_=  json.Marshal(asset)
-	stub.PutState(userAssets,assetAsBytes)
-		
+	stub.PutState(OwnerAssets,assetAsBytes)
+
 //double check
-	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function 
+	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
         fmt.Printf("%+v\n", supplierasset)
-		
-	assetAsBytes,_ = stub.GetState(userAssets)        // The same key which we used in Init function 
+
+	assetAsBytes,_ = stub.GetState(OwnerAssets)        // The same key which we used in Init function
 	json.Unmarshal( assetAsBytes, &asset)
 	 fmt.Printf("%+v\n", asset)
-//update the MarketOrder and push back to ledger
-		
-	MarketOrderID := args[1]
-        orderAsBytes, err = stub.GetState(MarketOrderID)
+//update the RetailerOrder and push back to ledger
+
+	RetailerOrderID := args[1]
+        orderAsBytes, err = stub.GetState(RetailerOrderID)
 	if err != nil {
 		return nil, errors.New("Failed to get openorders")
 	}
-	MarketOrder := Order{} 
-	json.Unmarshal(orderAsBytes, &MarketOrder)
-	MarketOrder.Status = "Delivered to market"
-	orderAsBytes,err = json.Marshal(MarketOrder) 
-	stub.PutState(MarketOrderID,orderAsBytes)      
+	RetailerOrder := Order{}
+	json.Unmarshal(orderAsBytes, &RetailerOrder)
+	RetailerOrder.Status = "Delivered to market"
+	orderAsBytes,err = json.Marshal(RetailerOrder)
+	stub.PutState(RetailerOrderID,orderAsBytes)
 	fmt.Printf("%+v\n", ShipOrder)
-		
-	
+
+
+
 	var b [2]string
 	b[0] = args[1]
-	b[1] = ContainerID
+	b[1] = BatchID   //Later on this will be an array of batch IDs
+
 	checktheproduct(stub,b)
-		
+
 	}else
         {
                 stub.PutState("delivertomarket",[]byte("failure in this function"))
-                //t.read(stub,"setuser")
+                //t.read(stub,"setOwner")
+								fmt.Printf("Failure in Deliverto_Retailer")
                 return nil,nil
         }
+
+
 return nil,nil
 }
 
 
+
 func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error) {
+
 // args[0] args[1]
-// MarketOrderID, ContainerID
+// MarketOrderID, BatchID
 	fmt.Println("Let us check the product")
 	OrderID := args[0]
-	ContainerID := args[1]
+	BatchID := args[1]
 //fetch order details
 	orderAsBytes, err := stub.GetState(OrderID)
 	if err != nil {
 		return  errors.New("Failed to get openorders")
 	}
-	ShipOrder := Order{} 
+	ShipOrder := Order{}
 	json.Unmarshal(orderAsBytes, &ShipOrder)
 //fetch container details
-       assetAsBytes,_ := stub.GetState(ContainerID)
-	Deliveredcontainer := MilkContainer{}
-	json.Unmarshal(assetAsBytes, &Deliveredcontainer)
+       assetAsBytes,_ := stub.GetState(BatchID)
+	Deliveredbatch := Batch{}
+	json.Unmarshal(assetAsBytes, &Deliveredbatch)
+
 //check and transfer coins
-	if (Deliveredcontainer.Userlist[0].User == "Market" && Deliveredcontainer.Userlist[0].Litres == ShipOrder.Litres) {
-		
+	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
+
 		fmt.Println("Thanks, I got  the right product, transferring amount to Supplier/Manufacturer")
-		stub.PutState("Market Response",[]byte("Product received"))
 		var b [3]string
-		b[0]= "50"
-		b[1] = "Market"
+		b[0]= strconv.Itoa(ShipOrder.Quantity *30)   //price per batch 30
+		b[1] = "Retailer"
 		b[2] = "Supplier"
-		
+
 		err = transfer(stub,b)
 		if err!=nil{
 			return err
 		}
-	        b[0]= "25"
+	  b[0]= strconv.Itoa(25)
 		b[1] = "Supplier"
 		b[2] = "Logistics"
 		err = transfer(stub,b)
@@ -852,49 +1008,52 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 			return err
 		}
 		return nil
-       }else{
-                stub.PutState("checktheproduct",[]byte("failure"))
+}else{
+    stub.PutState("checktheproduct",[]byte("failure"))
 		fmt.Println("I didn't get the right product")
-              
-                return nil
-        }
-	
+    return nil
+ }
+
+
 return nil
+
+
 }
 
 
+
 func transfer( stub shim.ChaincodeStubInterface, args [3]string) ( error) {
-	
+
 //args[0]             args[1]         args[2]
-//No of supplycoin      Sender         Reciever   
-	//lets keep it simple for now, just fetch the coin from ledger, change username to Supplier and End of Story
+//No of supplycoin      Sender         Reciever
+	//lets keep it simple for now, just fetch the coin from ledger, change Ownername to Supplier and End of Story
 	transferamount,_ := strconv.Atoi(args[0])
 	sender := args[1]                               // this thing should be given by us in UI background
-	receiver := args[2]                            // this will be given by the user on web page
-	
+	receiver := args[2]                            // this will be given by the Owner on web page
+
 	fmt.Println( sender, "transferring", transferamount, "coins to", receiver)
-	
+
         senderAssets := sender +"Assets"
-        senderassetAsBytes,_ := stub.GetState(senderAssets)        // The same key which we used in Init function 
+        senderassetAsBytes,_ := stub.GetState(senderAssets)        // The same key which we used in Init function
 	senderasset := Asset{}
 	json.Unmarshal( senderassetAsBytes, &senderasset)
-	
-	
+
+
 	receiverAssets := receiver+"Assets"
-        receiverassetAsBytes,_ := stub.GetState(receiverAssets)        // The same key which we used in Init function 
+        receiverassetAsBytes,_ := stub.GetState(receiverAssets)        // The same key which we used in Init function
 	receiverasset := Asset{}
 	json.Unmarshal( receiverassetAsBytes, &receiverasset)
-	
+
 	if ( senderasset.Supplycoins >= transferamount){
-		
+
 	senderasset.Supplycoins -= transferamount
 	receiverasset.Supplycoins += transferamount
-	
+
         senderassetAsBytes,_=  json.Marshal(senderasset)
 	stub.PutState(senderAssets,  senderassetAsBytes)
 	fmt.Println("Balance of " , sender)
        fmt.Printf("%+v\n", senderasset)
-		
+
 	receiverassetAsBytes,_=  json.Marshal(receiverasset)
 	stub.PutState( receiverAssets,receiverassetAsBytes)
 	fmt.Println("Balance of " , receiver)
@@ -904,27 +1063,13 @@ func transfer( stub shim.ChaincodeStubInterface, args [3]string) ( error) {
 		str := "Failed to transfer amount from" + sender + "to" + receiver
 		return  errors.New(str)
 	}
-	
+
+
 }
 
-	
-func (t *SimpleChaincode) Dummyfunctionthree(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
 
-	a := args[0]
-	fmt.Printf(a)
 
-return nil,nil
-}	
-
-func (t *SimpleChaincode) Dummyfunctionfour(stub shim.ChaincodeStubInterface,  args []string) ([]byte, error) {
-
-	a := args[0]
-	fmt.Printf(a)
-
-return nil,nil
-}	
-
-	
+// Query is our entry point for queries
 func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("query is running " + function)
 
@@ -939,7 +1084,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 
 // read - query function to read key/value pair
 func (t *SimpleChaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	var key, jsonResp string
+	var key, jsonNewbatchp string
 	var err error
 
 	if len(args) != 1 {
@@ -949,8 +1094,8 @@ func (t *SimpleChaincode) read(stub shim.ChaincodeStubInterface, args []string) 
 	key = args[0]
 	valAsbytes, err := stub.GetState(key)
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return nil, errors.New(jsonResp)
+		jsonNewbatchp = "{\"Error\":\"Failed to get state for " + key + "\"}"
+		return nil, errors.New(jsonNewbatchp)
 	}
 
 	return valAsbytes, nil
