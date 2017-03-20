@@ -33,6 +33,8 @@ var Count int                          //To keep count of Boxes created
 //In our case product is a discrete one like Pendrive, hard disk etc
 type Product struct{
        ProductID string               `json:"productid"`
+	
+	Item string                  `json:"item"`
        Owner string                     `json:"owner"`
        Status string                   `json:"status"`
 
@@ -42,18 +44,21 @@ type Product struct{
 
 type Batch struct{
        BatchID string               `json:"batchid"`
+	
+	Item string                  `json:"item"`
        Quantity int                 `json:"quantity"`
        Productlist []string      `json:"productlist"`
        Owner string                 `json:"owner"`
        Status string                `json:"status"`
+	
       // Flag int                      `json:"flag"`
 }
 
 type Order struct{
        OrderID string                  `json:"orderid"`
-	Product string                  `json:"product"`
+	Item string                  `json:"item"`
 	Timestamp int64                `json:"timestamp"`
-
+       Price int                       `json:"price"`
        User string                     `json:"user"`
        Status string                   `json:"status"`
        Quantity int                      `json:"quantity"`
@@ -66,7 +71,7 @@ type SupplierOrder struct {
 	Towhom string                 `json:"towhom"`
 	BatchID string            `json:"BatchID"`
  	User string                `json:"supplier"`
-
+Timestamp int64                `json:"timestamp"`
 
 }
 
@@ -84,6 +89,7 @@ type AllSupplierOrders struct {
 type Asset struct{
 	Owner string        `json:"owner"`
 	//BatchIDs []string `json:"BatchIDs"`
+	Item string  `json:"item"`
 	BatchIDs []string `json:"batchIDs"`
 	NumberofProducts int `json:"numberofproducts"`
 	Supplycoins int `json:"supplycoins"`
@@ -214,17 +220,17 @@ return nil, errors.New("Received unknown function invocation: " + function)
 
 
 
-func  Create_Batch(stub shim.ChaincodeStubInterface, args string ) ( error) {
+func  Create_Batch(stub shim.ChaincodeStubInterface, args [2]string ) ( error) {
 
-//args
-//No of batches in string format
+//args[0]                                //args[1]
+//No of batches in string format         //item to be manufactured
 
 //var err error
-Quantityofbatches,_ := strconv.Atoi(args)             // No of batches to be created
+Quantityofbatches,_ := strconv.Atoi(args[0])             // No of batches to be created, string to integer
 Productsperbatch := 10
 owner := "Supplier"
 status := "Manufactured"
-
+	itemtobemanufactured := args[1]
 
 for j:=0;j<Quantityofbatches;j++{
 //Each time this outer loop runs a new batch of products is created
@@ -253,10 +259,12 @@ if  Newbatch.BatchID == batchid{
         Newbatch.Owner = owner
         Newbatch.Status = status
         Newbatch.Quantity = Productsperbatch
+	Newbatch.Item = itemtobemanufactured
 
 	for i:=0; i < Newbatch.Quantity ;i++{
 	 	 Newproduct := Product{}
 	   Newproduct.ProductID = "prod"+strconv.Itoa(Count)+"."+strconv.Itoa(i)
+		Newproduct.Item = itemtobemanufactured
      Newproduct.Owner = owner
      Newproduct.Status = status
      productasbytes ,_ := json.Marshal( Newproduct)
@@ -289,7 +297,7 @@ fmt.Printf("%+v\n", Newbatch)
 	supplierassetAsBytes,_ := stub.GetState("SupplierAssets")        // The same key which we used in Init function
 	supplierasset := Asset{}
 	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-
+        supplierasset.Item = itemtobemanufactured
 	supplierasset.BatchIDs = append(supplierasset.BatchIDs, Newbatch.BatchID)
 	supplierasset.NumberofProducts += Newbatch.Quantity
 	supplierassetAsBytes,_=  json.Marshal(supplierasset)
@@ -355,7 +363,7 @@ func randSeq(n int) string {
 
 func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //args[0]      args[1]
-//"cus123"       "10"
+//Biscuit       "10"
 	var err error
 	fmt.Println("Hello customer, welcome ")
 //fetching entire list of customer orders
@@ -365,32 +373,25 @@ func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterfa
 	}
 	var orders AllOrders
 	json.Unmarshal(customerordersAsBytes, &orders)
-
+//generating customer order
 	Openorder := Order{}
-        Openorder.OrderID = "cusorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+        Openorder.OrderID = "Customerorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
 	Openorder.Timestamp = getTimestamp()
 	Openorder.Item   = args[0]
-	
-	Openorder.Quantity, err = strconv.Atoi(args[1])
-	Openorder.User = "customer"
-        Openorder.Status = "Order received by Retailer"
-	
 	Openorder.Quantity, err = strconv.Atoi(args[1])
 	if err != nil {
 		return nil, errors.New(" No of products must be a numeric string")
 	}
+	Openorder.Price = Openorder.Quantity * 5    //Cost if one unit product is 5
+	Openorder.User = "customer"
+        Openorder.Status = "Order received by Retailer"
+	
 	fmt.Println("Hello customer, your order has been generated successfully, you can track it with id in the following details")
 	fmt.Println("%+v\n",Openorder)
         orderAsBytes,_ := json.Marshal(Openorder)
 	stub.PutState(Openorder.OrderID,orderAsBytes)
 
-	customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
-	if err != nil {
-		return nil, errors.New("Failed to get openorders")
-	}
-	var orders AllOrders
-	json.Unmarshal(customerordersAsBytes, &orders)
-
+//Adding the neworder to existing order list
 	orders.OpenOrders = append(orders.OpenOrders , Openorder);		//append the new order - Openorder
 	fmt.Println(" appended",  Openorder.OrderID,"to existing customer orders")
 	jsonAsBytes, _ := json.Marshal(orders)
@@ -635,26 +636,32 @@ CustomerOrder := Order{}
 json.Unmarshal(orderAsBytes, &CustomerOrder)
 quantity := CustomerOrder.Quantity
 
+//fetching all orders of market
+	
+ordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get  existing list of Retailer orders")
+	}
+	var orders AllOrders
+	json.Unmarshal(ordersAsBytes, &orders)
+	
+
 //Generating market order
 
 Openorder := Order{}
+Openorder.OrderID = "Retailerorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+Openorder.Timestamp = getTimestamp()
+Openorder.Item   = CustomerOrder.Item
 Openorder.User = "Retailer"
 Openorder.Status = "Order placed to Supplier "
-Openorder.OrderID = args[1]
 Openorder.Quantity = ((quantity - (quantity % 10)) /10) + 1 //Rounding to the nearest number of boxes that can suffice for the quantity asked by customer
-
+Openorder.Price =  Openorder.Quantity *50              // Cost of 1 batch is 50 coins 
 orderAsBytes,_ = json.Marshal(Openorder)
 stub.PutState(Openorder.OrderID,orderAsBytes)
 fmt.Println("your Order has been generated successfully")
 fmt.Printf("%+v\n", Openorder)
 
 //Add the new market order to market orders list
-	ordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
-	if err != nil {
-		return nil, errors.New("Failed to get  existing list of Retailer orders")
-	}
-	var orders AllOrders
-	json.Unmarshal(ordersAsBytes, &orders)
 	orders.OpenOrders = append(orders.OpenOrders , Openorder);		//append the new order - Openorder
 	fmt.Println(" appended ",Openorder.OrderID,"to existing market orders")
 	jsonAsBytes, _ := json.Marshal(orders)
@@ -729,7 +736,9 @@ if (len(supplierasset.BatchIDs) >= quantity  ){
 
   }else{
 	        fmt.Println("Right now there isn't sufficient quantity , Create a new container")
-		b := strconv.Itoa(quantity)
+	var b [2]string
+		b[0] = strconv.Itoa(quantity)  //converting integer to string
+	b[1]=ShipOrder.Item
 	 Create_Batch(stub,b)
 
 
@@ -753,6 +762,7 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 	ShipOrder.Towhom = args[1]
 	ShipOrder.BatchID = args[2]
 	ShipOrder.User = "Supplier"
+	ShipOrder.Timestamp = getTimestamp()
 
 	orderAsBytes, _ :=json.Marshal(ShipOrder)
 	stub.PutState( ShipOrder.OrderID, orderAsBytes)
