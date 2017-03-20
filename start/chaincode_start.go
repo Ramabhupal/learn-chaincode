@@ -410,8 +410,8 @@ func getTimestamp() int64 {
 
  s ,err:= strconv.ParseInt( time.Now().Format("20060102150405"), 10, 64)
 	if err !=nil{
-		fmt.Printf("Could not generate ")
-		return nil
+		fmt.Printf("Could not generate timestamp")
+		
         }
 fmt.Printf("%T, %v\n", s, s)
  return s
@@ -766,7 +766,7 @@ func (t *SimpleChaincode)  Call_Logistics(stub shim.ChaincodeStubInterface, args
 	
 	
 	ShipOrder := SupplierOrder{}
-	ShipOrder.OrderID = "Supplierorder"+ strconv.Itoa(len(suporders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+	ShipOrder.OrderID = "Supplierorder"+ strconv.Itoa(len(suporders.SupplierOrdersList)+1)   //So series of orders will be like cusorder1,cusorder2 etc
 	
 	ShipOrder.Towhom = args[0]
 	ShipOrder.BatchID = args[1]
