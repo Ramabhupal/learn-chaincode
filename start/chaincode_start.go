@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"math/rand"
+	"time"
 )
 
 // SimpleChaincode example simple Chaincode implementation
@@ -15,7 +15,7 @@ type SimpleChaincode struct {
 }
 
 
-var letters = []rune("1234567890")
+//var letters = []rune("1234567890")
 
 
 //var containerIndexStr = "_containerindex"    //This will be used as key and a value will be an array of Container IDs
@@ -51,6 +51,9 @@ type Batch struct{
 
 type Order struct{
        OrderID string                  `json:"orderid"`
+	Product string                  `json:"product"`
+	Timestamp int64                `json:"timestamp"`
+
        User string                     `json:"user"`
        Status string                   `json:"status"`
        Quantity int                      `json:"quantity"`
@@ -340,7 +343,7 @@ return nil,nil
 }
 
 
-
+/*   Function to generate a practical OrderID
 func randSeq(n int) string {
     b := make([]rune, n)
     for i := range b {
@@ -348,22 +351,31 @@ func randSeq(n int) string {
     }
     return string(b)
 }
-
+*/
 
 func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 //args[0]      args[1]
 //"cus123"       "10"
 	var err error
 	fmt.Println("Hello customer, welcome ")
-
+//fetching entire list of customer orders
+        customerordersAsBytes, err := stub.GetState(customerOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	var orders AllOrders
+	json.Unmarshal(customerordersAsBytes, &orders)
 
 	Openorder := Order{}
-        Openorder.User = "customer"
+        Openorder.OrderID = "cusorder"+ strconv.Itoa(len(orders.OpenOrders)+1)   //So series of orders will be like cusorder1,cusorder2 etc
+	Openorder.Timestamp = getTimestamp()
+	Openorder.Item   = args[0]
+	
+	Openorder.Quantity, err = strconv.Atoi(args[1])
+	Openorder.User = "customer"
         Openorder.Status = "Order received by Retailer"
-        //Openorder.OrderID = args[0]
-	Openorder.OrderID = randSeq(10)
-      //  Openorder.Quantity, err = strconv.Atoi(args[1])  ///No of units of product the customer wants
-	Openorder.Quantity, err = strconv.Atoi(args[0])
+	
+	Openorder.Quantity, err = strconv.Atoi(args[1])
 	if err != nil {
 		return nil, errors.New(" No of products must be a numeric string")
 	}
@@ -389,6 +401,23 @@ func (t *SimpleChaincode) Buyproductfrom_Retailer(stub shim.ChaincodeStubInterfa
 
 	return nil,nil
 }
+
+
+
+
+func getTimestamp() int64 {
+
+ s ,err:= strconv.ParseInt( time.Now().Format("20060102150405"), 10, 64)
+	if err !=nil{
+		fmt.Printf("Could not generate ")
+		return nil
+        }
+fmt.Printf("%T, %v\n", s, s)
+ return s
+
+}
+
+
 
 func(t *SimpleChaincode)  Vieworderby_Retailer(stub shim.ChaincodeStubInterface,args []string) ([]byte, error) {
 // This will be invoked by MARKET
