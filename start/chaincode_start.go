@@ -533,7 +533,7 @@ func Deliverto_Customer(stub shim.ChaincodeStubInterface ,args string) ([]byte,e
 	Customerasset := Asset{}
 	json.Unmarshal(customerassetAsBytes, &Customerasset)
 	fmt.Printf("%+v\n", Customerasset)
-if (Retailerasset.NumberofProducts >= quantity ){
+if (Retailerasset.NumberofProducts >= quantity && ShipOrder.Status == "Order received by Retailer"){
 	fmt.Println("Inside deliver to customer, market has quantity")
 
 	id := Retailerasset.BatchIDs[0]
@@ -852,6 +852,25 @@ func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args
 
 	fmt.Printf("%+v\n", RetailerOrder)
 	
+//Updating it in the entire list of market orders
+	
+	marketordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	var orders AllOrders
+	json.Unmarshal(marketordersAsBytes, &orders)
+
+
+		for i :=0; i<len(orders.OpenOrders);i++{
+			if (orders.OpenOrders[i].OrderID == RetailerOrder.OrderID){
+			orders.OpenOrders[i].Status = "RetailerOrder.Status "
+		         customerordersAsBytes , _ = json.Marshal(orders)
+                        stub.PutState(customerOrdersStr,  customerordersAsBytes)
+			}
+	       }
+
+//Fetching Supplier order details
 	supplierorderAsBytes, err := stub.GetState(SupplierOrderID)
 	if err != nil {
 		return  nil,errors.New("Failed to get openorders")
@@ -973,14 +992,6 @@ if (Newbatch.Owner == "Supplier"){
 	assetAsBytes,_=  json.Marshal(asset)
 	stub.PutState(OwnerAssets,assetAsBytes)
 
-//double check
-	supplierassetAsBytes,_ = stub.GetState("SupplierAssets")        // The same key which we used in Init function
-	json.Unmarshal( supplierassetAsBytes, &supplierasset)
-        fmt.Printf("%+v\n", supplierasset)
-
-	assetAsBytes,_ = stub.GetState(OwnerAssets)        // The same key which we used in Init function
-	json.Unmarshal( assetAsBytes, &asset)
-	 fmt.Printf("%+v\n", asset)
 //update the RetailerOrder and push back to ledger
 
 	RetailerOrderID := args[1]
@@ -995,6 +1006,22 @@ if (Newbatch.Owner == "Supplier"){
 	orderAsBytes,err = json.Marshal(RetailerOrder)
 	stub.PutState(RetailerOrderID,orderAsBytes)
 	fmt.Printf("%+v\n", ShipOrder)
+
+	marketordersAsBytes, err := stub.GetState(openOrdersStr)         // note this is ordersAsBytes - plural, above one is orderAsBytes-Singular
+	if err != nil {
+		return nil, errors.New("Failed to get openorders")
+	}
+	var orders AllOrders
+	json.Unmarshal(marketordersAsBytes, &orders)
+
+
+		for i :=0; i<len(orders.OpenOrders);i++{
+			if (orders.OpenOrders[i].OrderID == RetailerOrder.OrderID){
+			orders.OpenOrders[i].Status = RetailerOrder.Status 
+		         customerordersAsBytes , _ = json.Marshal(orders)
+                        stub.PutState(customerOrdersStr,  customerordersAsBytes)
+			}
+	       }
 
 
 
