@@ -608,7 +608,7 @@ productasbytes ,_ := stub.GetState(Customerasset.BatchIDs[k])
                         stub.PutState(customerOrdersStr,  customerordersAsBytes)
 			}
 	       }
-		transferamount= strconv.Itoa(ShipOrder.Price)
+		transferamount := strconv.Itoa(ShipOrder.Price)
 		b := [3]string{transferamount, "Customer", "Retailer"}
 	           transfer(stub,b)        //Transfer should be automated. So it can't be invoked from UI..Loop hole
 	               fmt.Println("FINALLLLLYYYY, END OF THE STORY")
@@ -944,7 +944,7 @@ if (Newbatch.Owner == "Supplier"){
 //update market assets
 	fmt.Println("Updating ",OwnerAssets)
 	asset.NumberofProducts += Newbatch.Quantity
-	asset.Item = ShipOrder.Item
+	
 	fmt.Println("appending", BatchID,"to Retailer batch id list")
         asset.BatchIDs = append(asset.BatchIDs,BatchID)
        fmt.Printf("%+v\n", asset)
@@ -989,6 +989,7 @@ if (Newbatch.Owner == "Supplier"){
 	}
 	RetailerOrder := Order{}
 	json.Unmarshal(orderAsBytes, &RetailerOrder)
+	asset.Item = RetailerOrder.Item
 	RetailerOrder.Status = "Delivered to market"
 	orderAsBytes,err = json.Marshal(RetailerOrder)
 	stub.PutState(RetailerOrderID,orderAsBytes)
@@ -1051,7 +1052,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 		if err!=nil{
 			return err
 		}
-	  b[0]= strconv.Itoa(ShipOrder.Price * 0.25)       //25 percent of what supplier gets
+	  b[0]= strconv.Itoa(25)       //25 percent of what supplier gets
 		b[1] = "Supplier"
 		b[2] = "Logistics"
 		err = transfer(stub,b)
