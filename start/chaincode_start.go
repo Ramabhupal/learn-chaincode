@@ -864,9 +864,9 @@ func(t *SimpleChaincode) pickuptheproduct(stub shim.ChaincodeStubInterface, args
 
 		for i :=0; i<len(orders.OpenOrders);i++{
 			if (orders.OpenOrders[i].OrderID == RetailerOrder.OrderID){
-			orders.OpenOrders[i].Status = "RetailerOrder.Status "
-		         customerordersAsBytes , _ = json.Marshal(orders)
-                        stub.PutState(customerOrdersStr,  customerordersAsBytes)
+			orders.OpenOrders[i].Status = RetailerOrder.Status 
+		         marketordersAsBytes , _ = json.Marshal(orders)
+                        stub.PutState(openOrdersStr,  marketordersAsBytes)
 			}
 	       }
 
@@ -1018,8 +1018,8 @@ if (Newbatch.Owner == "Supplier"){
 		for i :=0; i<len(orders.OpenOrders);i++{
 			if (orders.OpenOrders[i].OrderID == RetailerOrder.OrderID){
 			orders.OpenOrders[i].Status = RetailerOrder.Status 
-		         customerordersAsBytes , _ = json.Marshal(orders)
-                        stub.PutState(customerOrdersStr,  customerordersAsBytes)
+		         marketordersAsBytes , _ = json.Marshal(orders)
+                        stub.PutState(openOrdersStr,  marketordersAsBytes)
 			}
 	       }
 
