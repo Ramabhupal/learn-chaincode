@@ -118,7 +118,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	fmt.Println("Welcome  to  Supply chain management , Deployment has been started...")
 	fmt.Printf("Hope for best, Plan for the worst")
 	fmt.Printf("Hope for bestPlan for the worst!!!!!!!")
-	
+	fmt.Printf("Never let down")
 
 
        if len(args) != 1 {
