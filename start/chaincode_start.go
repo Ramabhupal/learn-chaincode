@@ -232,7 +232,7 @@ func  Create_Batch(stub shim.ChaincodeStubInterface, args [2]string ) ( error) {
 
 //var err error
 Quantityofbatches,_ := strconv.Atoi(args[0])             // No of batches to be created, string to integer
-Productsperbatch :=  15
+Productsperbatch :=  10
 owner := "Supplier"
 status := "Manufactured"
 	itemtobemanufactured := args[1]
@@ -1068,7 +1068,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 	
 
 //check and transfer coins
-	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 15) {
+	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
 
 		fmt.Println("Thanks, I got  the right product, transferring amount to Supplier/Manufacturer")
 		var b [3]string
