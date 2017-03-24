@@ -1068,7 +1068,7 @@ func  checktheproduct(stub shim.ChaincodeStubInterface, args [2]string) ( error)
 	
 
 //check and transfer coins
-	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 10) {
+	if (Deliveredbatch.Owner == "Retailer" && Deliveredbatch.Quantity == ShipOrder.Quantity * 15) {
 
 		fmt.Println("Thanks, I got  the right product, transferring amount to Supplier/Manufacturer")
 		var b [3]string
