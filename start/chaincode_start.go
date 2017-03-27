@@ -120,7 +120,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	fmt.Printf("Hope for bestPlan for the worst!!!!!!!")
 	fmt.Printf("Never let down")
 fmt.Printf("Always go up")
-fmt.Printf("Always go upppppppppppppppp")
+fmt.Printf("Always go")
 
 
        if len(args) != 1 {
