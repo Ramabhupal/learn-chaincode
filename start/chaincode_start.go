@@ -165,6 +165,28 @@ fmt.Printf("Always gokbklfbld")
 	if err != nil {
 		return nil, err
 }
+	
+	/*Creating truck list for logistics */
+	
+	
+	var a[5] string 
+	a[0] = "Truck 1"
+	a[1] = "Truck 2"
+	a[2] = "Truck 3"
+	a[3]= "Truck 4"
+	a[3]= "Truck 5"
+	
+	fmt.Printf("%v",a)
+	
+	trucklistasbytes,_ := json.Marshal(a)
+	stub.PutState("Truck list",trucklistasbytes)
+//Double checking- can be deleted later on
+	var b[5] string
+	trucklistasbytes ,_ = stub.GetState("Truck list")
+	json.Unmarshal(trucklistasbytes, &b)
+	
+	fmt.Printf("%v",b)
+//Checking done for truck list
 // Newbatchetting the Assets of Supplier,Market, Logistics, Customer
 
 	var emptyasset Asset
