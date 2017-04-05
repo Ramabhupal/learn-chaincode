@@ -122,6 +122,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 fmt.Printf("Always go up")
 fmt.Printf("Always go")
 
+fmt.Printf("Always gokbklfbld")
 
        if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 1")
