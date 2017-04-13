@@ -121,6 +121,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	fmt.Printf("Never let down")
 fmt.Printf("Always go up")
 fmt.Printf("Always go go go go")
+fmt.Printf("Always go go go go in life")	
 
 fmt.Printf("Always gokbklfbld")
 
