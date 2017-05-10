@@ -124,6 +124,7 @@ fmt.Printf("Always go go go go")
 fmt.Printf("Always go go go go in life")	
 
 fmt.Printf("Always gokbklfbld")
+	fmt.Printf("Always gokbklfbldgfhgthytu")
 
        if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 1")
