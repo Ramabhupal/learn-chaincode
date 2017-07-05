@@ -122,7 +122,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 fmt.Printf("Always go up")
 fmt.Printf("Always go go go go")
 fmt.Printf("Always go go go go in life")	
-	fmt.printf("FINAL DEMOOOOOOOOOOO")
+	fmt.Printf("FINAL DEMOOOOOOOOOOO")
 
 fmt.Printf("Always gokbklfbld")
 	fmt.Printf("Always gokbklfbldgfhgthytu")
